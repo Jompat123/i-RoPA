@@ -4,7 +4,14 @@ const prisma = new PrismaClient();
 
 const createAuditLog = async (userId, action, tableName, recordId, oldData, newData) => {
   await prisma.auditLog.create({
-    data: { userId, action, tableName, recordId, oldData, oldData ? JSON.parse(JSON.stringify(oldData)) : null, newData }
+    data: {
+      userId,
+      action,
+      tableName,
+      recordId,
+      oldData: oldData ? JSON.parse(JSON.stringify(oldData)) : null,
+      newData
+    }
   });
 };
 
