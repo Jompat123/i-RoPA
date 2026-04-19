@@ -6,13 +6,12 @@ const getSummary = async (req) => {
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-  const [totalRopa, byDepartment, byRiskLevel, byStatus, monthlyTrend] = await Promise.all([
+  const [totalRopa, byDepartment, byRiskLevel, byStatus, recentRopas] = await Promise.all([
     prisma.ropaEntry.count(),
 
     prisma.ropaEntry.groupBy({
       by: ['departmentId'],
-      _count: true,
-      include: { department: true }
+      _count: true
     }),
 
     prisma.ropaEntry.groupBy({
@@ -25,17 +24,15 @@ const getSummary = async (req) => {
       _count: true
     }),
 
-    prisma.ropaEntry.groupBy({
-      by: [{ createdAt: 'asc' }],
-      _count: true,
-      where: { createdAt: { gte: sixMonthsAgo } }
+    prisma.ropaEntry.findMany({
+      where: { createdAt: { gte: sixMonthsAgo } },
+      select: { createdAt: true }
     })
   ]);
 
-  const departmentSummary = byDepartment.map(d => ({
-    departmentId: d.departmentId,
-    departmentName: d.department?.name || 'Unknown',
-    count: d._count
+  const departmentSummary = await Promise.all(byDepartment.map(async (d) => {
+    const dept = await prisma.department.findUnique({ where: { id: d.departmentId } });
+    return { departmentId: d.departmentId, departmentName: dept?.name || 'Unknown', count: d._count };
   }));
 
   const riskLevelSummary = byRiskLevel.reduce((acc, d) => {
@@ -48,23 +45,20 @@ const getSummary = async (req) => {
     return acc;
   }, {});
 
-  const monthlyData = monthlyTrend.reduce((acc, d) => {
-    const month = d.createdAt.toISOString().slice(0, 7);
-    acc[month] = (acc[month] || 0) + d._count;
+  const monthlyData = recentRopas.reduce((acc, r) => {
+    const month = r.createdAt.toISOString().slice(0, 7);
+    acc[month] = (acc[month] || 0) + 1;
     return acc;
   }, {});
 
-  const monthlyTrendFormatted = Object.entries(monthlyData).map(([month, count]) => ({
-    month,
-    count
-  }));
+  const monthlyTrend = Object.entries(monthlyData).map(([month, count]) => ({ month, count }));
 
   return {
     totalRopa,
     byDepartment: departmentSummary,
     byRiskLevel: riskLevelSummary,
     byStatus: statusSummary,
-    monthlyTrend: monthlyTrendFormatted
+    monthlyTrend
   };
 };
 
