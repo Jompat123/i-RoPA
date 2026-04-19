@@ -6,3 +6,87 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model Department {
+  id          String      @id @default(uuid())
+  name        String      @unique
+  description String?
+  createdAt   DateTime    @default(now())
+  users       User[]
+  ropaEntries RopaEntry[]
+}
+
+model User {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(DEPARTMENT_USER)
+  departmentId String?
+  createdAt    DateTime  @default(now())
+  department   Department? @relation(fields: [departmentId], references: [id])
+  createdRopas RopaEntry[]
+  auditLogs    AuditLog[]
+}
+
+enum Role {
+  ADMIN
+  DEPARTMENT_USER
+  VIEWER
+}
+
+model RopaEntry {
+  id               String         @id @default(uuid())
+  processName      String
+  purpose          String?
+  personalDataTypes String[]
+  dataCategory     String?
+  dataType         DataType       @default(GENERAL)
+  collectionMethod String?
+  dataSource       String?
+  legalBasis       String?
+  crossBorderTransfer Boolean     @default(false)
+  transferCountry  String?
+  retentionPeriod  String?
+  storageMethod    String?
+  deletionMethod   String?
+  securityOrg      String?
+  securityTech     String?
+  securityPhysical String?
+  riskLevel        RiskLevel      @default(LOW)
+  status           EntryStatus    @default(DRAFT)
+  departmentId     String
+  createdById      String
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  department       Department     @relation(fields: [departmentId], references: [id])
+  createdBy        User           @relation(fields: [createdById], references: [id])
+}
+
+enum DataType {
+  GENERAL
+  SENSITIVE
+}
+
+enum RiskLevel {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum EntryStatus {
+  DRAFT
+  COMPLETE
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  tableName String
+  recordId  String
+  oldData   Json?
+  newData   Json?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
