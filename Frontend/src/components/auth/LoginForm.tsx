@@ -87,12 +87,13 @@ export function LoginForm() {
           <div className="flex flex-row flex-wrap items-center justify-center gap-4">
             <Image
               src="/images/logo.png"
-              width={128}
-              height={128}
+              width={512}
+              height={512}
               alt="i-RoPA"
               priority
-              unoptimized
-              className="h-16 w-16 shrink-0 rounded-2xl object-contain shadow-lg [image-rendering:crisp-edges] sm:h-[5.5rem] sm:w-[5.5rem]"
+              quality={95}
+              sizes="(max-width: 640px) 64px, 88px"
+              className="h-16 w-16 shrink-0 rounded-2xl object-contain shadow-lg sm:h-[5.5rem] sm:w-[5.5rem]"
             />
             <h2 className="text-left text-3xl font-bold tracking-tight text-white sm:text-4xl">i-RoPA</h2>
           </div>

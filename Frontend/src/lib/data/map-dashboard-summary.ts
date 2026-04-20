@@ -1,5 +1,24 @@
 import type { SummaryCard } from "@/data/dashboard-mock";
 
+const SUMMARY_TITLES: Record<SummaryCard["type"], string> = {
+  total: "รายการทั้งหมด",
+  pending: "รอการอนุมัติ",
+  edit: "ต้องแก้ไข",
+  approved: "อนุมัติแล้ว",
+};
+
+const SUMMARY_TYPES: SummaryCard["type"][] = ["total", "pending", "edit", "approved"];
+
+/** การ์ดสรุปเป็นศูนย์ — ใช้เมื่อโหลด API ไม่สำเร็จและไม่ต้องการแสดงตัวเลขจำลอง */
+export function emptySummaryCards(): SummaryCard[] {
+  return SUMMARY_TYPES.map((type, index) => ({
+    id: index + 1,
+    title: SUMMARY_TITLES[type],
+    count: 0,
+    type,
+  }));
+}
+
 /** รูปแบบตอบจาก Backend `GET /dashboard/summary` */
 export type ApiDashboardSummary = {
   totalRopa: number;
@@ -25,23 +44,9 @@ export function mapApiSummaryToCards(api: ApiDashboardSummary): SummaryCard[] {
     approved: complete,
   } as const;
 
-  const titles: Record<SummaryCard["type"], string> = {
-    total: "รายการทั้งหมด",
-    pending: "รอการอนุมัติ",
-    edit: "ต้องแก้ไข",
-    approved: "อนุมัติแล้ว",
-  };
-
-  const types: SummaryCard["type"][] = [
-    "total",
-    "pending",
-    "edit",
-    "approved",
-  ];
-
-  return types.map((type, index) => ({
+  return SUMMARY_TYPES.map((type, index) => ({
     id: index + 1,
-    title: titles[type],
+    title: SUMMARY_TITLES[type],
     count: counts[type],
     type,
   }));

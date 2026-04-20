@@ -1,6 +1,8 @@
+import { apiPathUsers } from "@/config/api-endpoints";
 import { adminUserManagementMock } from "@/data/admin-mock";
 import type { AdminUserManagementData, AdminUserRole, AdminUserRow } from "@/types/admin";
-import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "./runtime";
+import { getLiveApiSession } from "@/lib/data/api-session";
+import { shouldUseMockData } from "./runtime";
 
 type Query = Record<string, string | string[] | undefined>;
 
@@ -50,12 +52,11 @@ function filterRows(rows: AdminUserRow[], q: string, role: string, department: s
 }
 
 async function fetchApiRows(): Promise<AdminUserRow[] | null> {
-  const base = getApiBaseUrl();
-  const token = await getAuthTokenFromCookie();
-  if (!base || !token) return null;
+  const session = await getLiveApiSession();
+  if (!session.ok) return null;
   try {
-    const res = await fetch(`${base}/api/users`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetch(`${session.base.replace(/\/$/, "")}${apiPathUsers()}`, {
+      headers: { Authorization: `Bearer ${session.token}` },
       cache: "no-store",
     });
     if (!res.ok) return null;
@@ -74,9 +75,32 @@ export async function getAdminUserManagementData(
   const role = (getParam(searchParams, "role") || "all") as "all" | AdminUserRole;
   const department = getParam(searchParams, "department");
 
-  const apiRows = shouldUseMockData() ? null : await fetchApiRows();
-  const source: "api" | "mock" = apiRows ? "api" : "mock";
-  const baseRows = apiRows ?? adminUserManagementMock.rows;
+  let baseRows: AdminUserRow[];
+  let source: "api" | "mock";
+  let loadError: string | null = null;
+
+  if (shouldUseMockData()) {
+    baseRows = adminUserManagementMock.rows;
+    source = "mock";
+  } else {
+    const session = await getLiveApiSession();
+    if (!session.ok) {
+      baseRows = [];
+      source = "api";
+      loadError = session.error;
+    } else {
+      const apiRows = await fetchApiRows();
+      if (apiRows) {
+        baseRows = apiRows;
+        source = "api";
+      } else {
+        baseRows = [];
+        source = "api";
+        loadError = "โหลดรายชื่อผู้ใช้จากเซิร์ฟเวอร์ไม่สำเร็จ";
+      }
+    }
+  }
+
   const rows = filterRows(baseRows, q, role, department);
   const departments = [...new Set(baseRows.map((r) => r.department))].sort((a, b) =>
     a.localeCompare(b, "th"),
@@ -84,6 +108,7 @@ export async function getAdminUserManagementData(
 
   return {
     source,
+    loadError,
     rows,
     filters: { q, role, department },
     departments,

@@ -25,6 +25,7 @@ export type DpoReviewRow = {
 
 export type DpoDashboardData = {
   source: "api" | "mock";
+  loadError?: string | null;
   summary: {
     pending: number;
     approved: number;
@@ -44,6 +45,7 @@ export type DpoDashboardData = {
 
 export type DpoReviewQueueData = {
   source: "api" | "mock";
+  loadError?: string | null;
   rows: DpoReviewRow[];
   departments: string[];
   filters: {
@@ -75,19 +77,27 @@ export type DpoReviewDetailData = {
   }>;
 };
 
+/** บทบาทตามขั้นตอนที่ 1 ของแบบ RoPA (ผู้ควบคุม vs ผู้ประมวลผล) */
+export type RopaEntityRole = "controller" | "processor";
+
 export type DpoRecordRow = {
   id: string;
+  role: RopaEntityRole;
   processName: string;
   department: string;
   purpose: string;
   dataType: string;
   legalBasis: string;
   retentionPeriod: string;
-  security: string;
+  /** ข้อ 14 — มีค่าเมื่อ role เป็น controller */
+  rightsRefusalNote: string | null;
+  /** ข้อ 15 — สรุปมาตรการ (controller); processor ใช้ null แล้วแสดงข้อความ N/A ใน UI */
+  securityMeasuresSummary: string | null;
 };
 
 export type DpoRecordsData = {
   source: "api" | "mock";
+  loadError?: string | null;
   rows: DpoRecordRow[];
   filters: {
     department: string;

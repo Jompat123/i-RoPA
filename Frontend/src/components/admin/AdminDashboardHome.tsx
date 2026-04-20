@@ -1,3 +1,4 @@
+import { DataSourceBanner } from "@/components/common/DataSourceBanner";
 import type { AdminDashboardData, AdminUserRole } from "@/types/admin";
 
 type Props = { data: AdminDashboardData };
@@ -28,6 +29,7 @@ export function AdminDashboardHome({ data }: Props) {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+      <DataSourceBanner source={data.source} loadError={data.loadError ?? null} />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {[
           {
@@ -134,14 +136,19 @@ export function AdminDashboardHome({ data }: Props) {
 
         <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-800">บันทึกประวัติการใช้งานล่าสุด</h2>
+          <p className="mt-1 text-xs text-slate-500">รอ endpoint audit log จาก backend</p>
           <div className="mt-4 max-h-[420px] overflow-y-auto pr-1">
-            <ul className="space-y-3 text-sm text-slate-600">
-              {data.recentLogs.map((log, index) => (
-                <li key={index} className="border-b border-slate-100 pb-3 last:border-0">
-                  {log}
-                </li>
-              ))}
-            </ul>
+            {data.recentLogs.length === 0 ? (
+              <p className="text-sm text-slate-500">ยังไม่มีบันทึก — ข้อมูลจะแสดงเมื่อเชื่อม API</p>
+            ) : (
+              <ul className="space-y-3 text-sm text-slate-600">
+                {data.recentLogs.map((log, index) => (
+                  <li key={index} className="border-b border-slate-100 pb-3 last:border-0">
+                    {log}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </section>
       </div>

@@ -5,6 +5,7 @@ import type {
   DpoReviewQueueData,
   DpoReviewRow,
   DpoRecordsData,
+  RopaEntityRole,
 } from "@/types/dpo";
 
 export const dpoMockRows: DpoReviewRow[] = [
@@ -167,37 +168,67 @@ export const dpoReviewDetailMock: DpoReviewDetailData = {
   ],
 };
 
+const mockRecord = (
+  id: string,
+  role: RopaEntityRole,
+  processName: string,
+  department: string,
+  purpose: string,
+  dataType: string,
+  legalBasis: string,
+  retentionPeriod: string,
+  rights: string | null,
+  security: string | null,
+): DpoRecordRow => ({
+  id,
+  role,
+  processName,
+  department,
+  purpose,
+  dataType,
+  legalBasis,
+  retentionPeriod,
+  rightsRefusalNote: rights,
+  securityMeasuresSummary: security,
+});
+
 export const dpoRecordsMockRows: DpoRecordRow[] = [
-  {
-    id: "1",
-    processName: "ออกใบกำกับภาษีอิเล็กทรอนิกส์ (e-Tax)",
-    department: "บัญชี/ลูกค้า",
-    purpose: "เพื่อทำบัญชีส่งภาษี",
-    dataType: "ชื่อ, ที่อยู่, เลขภาษี",
-    legalBasis: "หน้าที่ตามกฎหมาย",
-    retentionPeriod: "10 ปี",
-    security: "เข้ารหัสข้อมูล, จำกัดสิทธิ์การเข้าถึง",
-  },
-  {
-    id: "2",
-    processName: "จัดส่งพัสดุลูกค้า (e-Waybill)",
-    department: "ขนส่ง/ลูกค้า",
-    purpose: "เพื่อส่งมอบสินค้า",
-    dataType: "ชื่อ, ที่อยู่, เบอร์โทร",
-    legalBasis: "ฐานสัญญา",
-    retentionPeriod: "5 ปี",
-    security: "จำกัดสิทธิ์การเข้าถึง",
-  },
-  {
-    id: "4",
-    processName: "รับสมัครพนักงานใหม่",
-    department: "HR/ผู้สมัคร",
-    purpose: "เพื่อคัดเลือกบุคลากร",
-    dataType: "ชื่อ, ประวัติ, ข้อมูลอ่อนไหว",
-    legalBasis: "ฐานสัญญา/ความยินยอม",
-    retentionPeriod: "3 ปี",
-    security: "จำกัดสิทธิ์การเข้าถึง",
-  },
+  mockRecord(
+    "1",
+    "controller",
+    "ออกใบกำกับภาษีอิเล็กทรอนิกส์ (e-Tax)",
+    "บัญชี/ลูกค้า",
+    "เพื่อทำบัญชีส่งภาษี",
+    "ชื่อ, ที่อยู่, เลขภาษี",
+    "หน้าที่ตามกฎหมาย",
+    "10 ปี",
+    "ยังไม่มีเคสปฏิเสธ",
+    "เข้ารหัสข้อมูล | จำกัดสิทธิ์การเข้าถึง",
+  ),
+  mockRecord(
+    "2",
+    "processor",
+    "จัดส่งพัสดุลูกค้า (e-Waybill)",
+    "ขนส่ง/ลูกค้า",
+    "เพื่อส่งมอบสินค้า",
+    "ชื่อ, ที่อยู่, เบอร์โทร",
+    "ฐานสัญญา",
+    "5 ปี",
+    null,
+    null,
+  ),
+  mockRecord(
+    "4",
+    "controller",
+    "รับสมัครพนักงานใหม่",
+    "HR/ผู้สมัคร",
+    "เพื่อคัดเลือกบุคลากร",
+    "ชื่อ, ประวัติ, ข้อมูลอ่อนไหว",
+    "ฐานสัญญา/ความยินยอม",
+    "3 ปี",
+    "",
+    "จำกัดสิทธิ์การเข้าถึง | Audit log",
+  ),
 ];
 
 export const dpoRecordsMock: DpoRecordsData = {

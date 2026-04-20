@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 
+import { DataSourceBanner } from "@/components/common/DataSourceBanner";
 import type { DpoReviewQueueData } from "@/types/dpo";
 
 type Props = { data: DpoReviewQueueData };
@@ -58,19 +59,12 @@ export function DpoReviewQueuePage({ data }: Props) {
         </div>
       ) : null}
 
+      <DataSourceBanner source={data.source} loadError={data.loadError ?? null} />
+
       <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <p className="text-3xl font-semibold text-slate-800">รายการที่รอการอนุมัติ</p>
-            <p className="mt-1 text-sm font-semibold text-slate-700">ตัวกรองข้อมูล</p>
-          </div>
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-              data.source === "api" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-            }`}
-          >
-            แหล่งข้อมูล: {data.source === "api" ? "Backend API" : "Mock"}
-          </span>
+        <div className="mb-3">
+          <p className="text-3xl font-semibold text-slate-800">รายการที่รอการอนุมัติ</p>
+          <p className="mt-1 text-sm font-semibold text-slate-700">ตัวกรองข้อมูล</p>
         </div>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <select

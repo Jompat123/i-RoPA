@@ -7,6 +7,7 @@ import {
   cookieBaseOptions,
 } from "@/lib/auth/session-cookies";
 import type { AppRole } from "@/types/session";
+import { apiPathAuthLogin } from "@/config/api-endpoints";
 import { getApiBaseUrl, shouldUseMockData } from "@/lib/data/runtime";
 
 type LoginBody = {
@@ -71,8 +72,7 @@ export async function POST(request: Request) {
 
   if (!useMock) {
     try {
-      const path = (process.env.AUTH_LOGIN_PATH ?? "/api/auth/login").replace(/^\//, "");
-      const res = await fetch(`${base}/${path}`, {
+      const res = await fetch(`${base.replace(/\/$/, "")}${apiPathAuthLogin()}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

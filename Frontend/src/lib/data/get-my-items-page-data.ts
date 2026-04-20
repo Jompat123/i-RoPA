@@ -1,7 +1,8 @@
-import { myItemsMockRows } from "@/data/records-mock";
+import { apiPathRopaList } from "@/config/api-endpoints";
 import { listMockRopa } from "@/lib/data/mock-ropa-store";
 import type { ItemStatus, MyItemRecord, MyItemsPageData } from "@/types/records";
-import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "./runtime";
+import { getLiveApiSession } from "@/lib/data/api-session";
+import { shouldUseMockData } from "./runtime";
 const PAGE_SIZE = 9999;
 
 type Query = Record<string, string | string[] | undefined>;
@@ -84,13 +85,12 @@ function applyFilters(rows: MyItemRecord[], q: string, status: string, departmen
 }
 
 async function fetchApiRows(): Promise<MyItemRecord[] | null> {
-  const base = getApiBaseUrl();
-  const token = await getAuthTokenFromCookie();
-  if (!base || !token) return null;
+  const session = await getLiveApiSession();
+  if (!session.ok) return null;
 
   try {
-    const res = await fetch(`${base}/api/ropa`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetch(`${session.base.replace(/\/$/, "")}${apiPathRopaList()}`, {
+      headers: { Authorization: `Bearer ${session.token}` },
       cache: "no-store",
     });
     if (!res.ok) return null;
@@ -118,9 +118,32 @@ export async function getMyItemsPageData(searchParams: Query): Promise<MyItemsPa
       department: row.department ?? null,
     })),
   );
-  const apiRows = shouldUseMockData() ? null : await fetchApiRows();
-  const source: "api" | "mock" = apiRows ? "api" : "mock";
-  const rawRows = apiRows ?? (shouldUseMockData() ? mockRows : myItemsMockRows);
+
+  let rawRows: MyItemRecord[];
+  let source: "api" | "mock";
+  let loadError: string | null = null;
+
+  if (shouldUseMockData()) {
+    rawRows = mockRows;
+    source = "mock";
+  } else {
+    const session = await getLiveApiSession();
+    if (!session.ok) {
+      rawRows = [];
+      source = "api";
+      loadError = session.error;
+    } else {
+      const apiRows = await fetchApiRows();
+      if (apiRows) {
+        rawRows = apiRows;
+        source = "api";
+      } else {
+        rawRows = [];
+        source = "api";
+        loadError = "โหลดรายการ ROPA จากเซิร์ฟเวอร์ไม่สำเร็จ";
+      }
+    }
+  }
 
   const filteredRows = applyFilters(rawRows, q, status, department);
   const pagedRows = filteredRows;
@@ -131,6 +154,7 @@ export async function getMyItemsPageData(searchParams: Query): Promise<MyItemsPa
 
   return {
     source,
+    loadError,
     rows: pagedRows,
     stats: collectStats(rawRows),
     departments,

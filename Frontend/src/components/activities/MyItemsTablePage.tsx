@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Eye, Pencil, Search } from "lucide-react";
 
+import { DataSourceBanner } from "@/components/common/DataSourceBanner";
 import type { ItemStatus, MyItemsPageData } from "@/types/records";
 
 type Props = {
@@ -24,10 +25,11 @@ function statusPill(status: ItemStatus): { label: string; className: string } {
 }
 
 export function MyItemsTablePage({ data, justSaved = false }: Props) {
-  const { rows, stats, departments, filters } = data;
+  const { rows, stats, departments, filters, source, loadError } = data;
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+      <DataSourceBanner source={source} loadError={loadError ?? null} />
       {justSaved ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">
           บันทึกฉบับร่างสำเร็จแล้ว และเพิ่มรายการในตารางเรียบร้อย

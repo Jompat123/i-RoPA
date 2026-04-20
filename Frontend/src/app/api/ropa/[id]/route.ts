@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { apiPathRopaItem } from "@/config/api-endpoints";
 import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/data/runtime";
 import { getMockRopaById, updateMockRopa } from "@/lib/data/mock-ropa-store";
 
@@ -19,7 +20,7 @@ export async function GET(_request: Request, context: Ctx) {
   if (!base || !token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const res = await fetch(`${base}/api/ropa/${id}`, {
+    const res = await fetch(`${base.replace(/\/$/, "")}${apiPathRopaItem(id)}`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
@@ -45,7 +46,7 @@ export async function PUT(request: Request, context: Ctx) {
   if (!base || !token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const res = await fetch(`${base}/api/ropa/${id}`, {
+    const res = await fetch(`${base.replace(/\/$/, "")}${apiPathRopaItem(id)}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,

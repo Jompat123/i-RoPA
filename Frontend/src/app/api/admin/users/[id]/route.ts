@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+
+import { apiPathUserItem } from "@/config/api-endpoints";
 import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/data/runtime";
 
 type UpdateUserPayload = {
@@ -24,7 +26,7 @@ export async function PATCH(request: Request, context: Ctx) {
   if (!base || !token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const res = await fetch(`${base}/api/users/${id}`, {
+    const res = await fetch(`${base.replace(/\/$/, "")}${apiPathUserItem(id)}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,

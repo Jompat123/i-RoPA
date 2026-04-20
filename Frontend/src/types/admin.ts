@@ -13,6 +13,7 @@ export type AdminUserRow = {
 
 export type AdminDashboardData = {
   source: "api" | "mock";
+  loadError?: string | null;
   totalUsers: number;
   totalDepartments: number;
   totalRopa: number;
@@ -24,6 +25,7 @@ export type AdminDashboardData = {
 
 export type AdminUserManagementData = {
   source: "api" | "mock";
+  loadError?: string | null;
   rows: AdminUserRow[];
   filters: {
     q: string;

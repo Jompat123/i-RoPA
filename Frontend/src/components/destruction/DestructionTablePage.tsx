@@ -1,5 +1,6 @@
 import { Download, Search } from "lucide-react";
 
+import { DataSourceBanner } from "@/components/common/DataSourceBanner";
 import type { DestructionPageData, DestructionStatus } from "@/types/records";
 
 type Props = {
@@ -22,6 +23,7 @@ function statusStyle(status: DestructionStatus): { label: string; className: str
 export function DestructionTablePage({ data }: Props) {
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+      <DataSourceBanner source={data.source} loadError={data.loadError ?? null} />
       <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
         <h1 className="text-3xl font-bold text-slate-900">ตรวจสอบการทำลายข้อมูล</h1>
 

@@ -1,6 +1,8 @@
+import { apiPathRopaList } from "@/config/api-endpoints";
 import { destructionMockRows } from "@/data/records-mock";
 import type { DestructionPageData, DestructionRow, DestructionStatus } from "@/types/records";
-import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "./runtime";
+import { getLiveApiSession } from "@/lib/data/api-session";
+import { shouldUseMockData } from "./runtime";
 const PAGE_SIZE = 9999;
 
 type Query = Record<string, string | string[] | undefined>;
@@ -90,13 +92,12 @@ function applyFilters(rows: DestructionRow[], filters: DestructionPageData["filt
 }
 
 async function fetchApiRows(): Promise<DestructionRow[] | null> {
-  const base = getApiBaseUrl();
-  const token = await getAuthTokenFromCookie();
-  if (!base || !token) return null;
+  const session = await getLiveApiSession();
+  if (!session.ok) return null;
 
   try {
-    const res = await fetch(`${base}/api/ropa`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetch(`${session.base.replace(/\/$/, "")}${apiPathRopaList()}`, {
+      headers: { Authorization: `Bearer ${session.token}` },
       cache: "no-store",
     });
     if (!res.ok) return null;
@@ -117,9 +118,31 @@ export async function getDestructionPageData(searchParams: Query): Promise<Destr
     endDate: getParam(searchParams, "endDate"),
   };
 
-  const apiRows = shouldUseMockData() ? null : await fetchApiRows();
-  const source: "api" | "mock" = apiRows ? "api" : "mock";
-  const rawRows = apiRows ?? destructionMockRows;
+  let rawRows: DestructionRow[];
+  let source: "api" | "mock";
+  let loadError: string | null = null;
+
+  if (shouldUseMockData()) {
+    rawRows = destructionMockRows;
+    source = "mock";
+  } else {
+    const session = await getLiveApiSession();
+    if (!session.ok) {
+      rawRows = [];
+      source = "api";
+      loadError = session.error;
+    } else {
+      const apiRows = await fetchApiRows();
+      if (apiRows) {
+        rawRows = apiRows;
+        source = "api";
+      } else {
+        rawRows = [];
+        source = "api";
+        loadError = "โหลดข้อมูลการทำลายจากเซิร์ฟเวอร์ไม่สำเร็จ — หมายเหตุ: ควรมี endpoint เฉพาะเมื่อ backend พร้อม";
+      }
+    }
+  }
   const filteredRows = applyFilters(rawRows, filters);
   const rows = filteredRows;
 
@@ -129,6 +152,7 @@ export async function getDestructionPageData(searchParams: Query): Promise<Destr
 
   return {
     source,
+    loadError,
     rows,
     departments,
     currentPage: 1,

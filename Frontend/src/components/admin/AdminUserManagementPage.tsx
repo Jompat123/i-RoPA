@@ -3,6 +3,7 @@
 import { KeyRound, Plus, RefreshCw, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { DataSourceBanner } from "@/components/common/DataSourceBanner";
 import type { AdminUserManagementData, AdminUserRole, AdminUserRow } from "@/types/admin";
 
 type Props = { data: AdminUserManagementData };
@@ -105,6 +106,7 @@ export function AdminUserManagementPage({ data }: Props) {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+      <DataSourceBanner source={data.source} loadError={data.loadError ?? null} />
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-900">User Management</h1>
         <button

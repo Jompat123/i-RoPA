@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { apiPathRopaItem } from "@/config/api-endpoints";
 import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/data/runtime";
 import { updateMockRopa } from "@/lib/data/mock-ropa-store";
 
@@ -48,7 +49,7 @@ export async function PATCH(request: Request, context: Ctx) {
   };
 
   try {
-    const res = await fetch(`${base}/api/ropa/${id}`, {
+    const res = await fetch(`${base.replace(/\/$/, "")}${apiPathRopaItem(id)}`, {
       method: "PUT",
       headers: {
         Authorization: `Bearer ${token}`,

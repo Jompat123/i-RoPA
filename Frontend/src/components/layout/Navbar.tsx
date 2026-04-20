@@ -18,7 +18,6 @@ type NavbarProps = {
 };
 
 export function Navbar({ user }: NavbarProps) {
-  const [searchQuery, setSearchQuery] = useState("");
   const [loggingOut, setLoggingOut] = useState(false);
 
   async function handleLogout() {
@@ -42,28 +41,32 @@ export function Navbar({ user }: NavbarProps) {
         </span>
         <input
           type="search"
-          placeholder="ค้นหา"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full rounded-full border-0 bg-slate-100 py-2.5 pl-12 pr-4 text-sm text-slate-700 outline-none ring-blue-200 transition focus:ring-2"
-          aria-label="ค้นหา"
+          disabled
+          readOnly
+          title="รอเชื่อมระบบค้นหากับ backend"
+          placeholder="ค้นหา (เร็วๆ นี้)"
+          className="w-full cursor-not-allowed rounded-full border-0 bg-slate-100 py-2.5 pl-12 pr-4 text-sm text-slate-500 opacity-80 outline-none"
+          aria-label="ค้นหา (ยังไม่พร้อมใช้งาน)"
         />
       </div>
 
       <div className="flex items-center gap-4 md:gap-6">
         <button
           type="button"
-          className="relative rounded-full p-2 text-slate-600 transition hover:bg-slate-50"
-          aria-label="การแจ้งเตือน"
+          disabled
+          title="การแจ้งเตือน — รอเชื่อม backend"
+          className="relative cursor-not-allowed rounded-full p-2 text-slate-400 opacity-70"
+          aria-label="การแจ้งเตือน (ยังไม่พร้อมใช้งาน)"
         >
           <Bell className="h-6 w-6" strokeWidth={2} aria-hidden />
-          <span className="absolute right-0 top-0 h-2 w-2 rounded-full border-2 border-white bg-red-500" />
         </button>
 
         <button
           type="button"
-          className="rounded-full p-2 text-slate-600 transition hover:bg-slate-50"
-          aria-label="ช่วยเหลือ"
+          disabled
+          title="ศูนย์ช่วยเหลือ — เร็วๆ นี้"
+          className="cursor-not-allowed rounded-full p-2 text-slate-400 opacity-70"
+          aria-label="ช่วยเหลือ (ยังไม่พร้อมใช้งาน)"
         >
           <CircleHelp className="h-6 w-6" strokeWidth={2} aria-hidden />
         </button>

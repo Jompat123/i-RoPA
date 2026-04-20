@@ -1,6 +1,8 @@
+import { apiPathAdminDashboardSummary, apiPathUsers } from "@/config/api-endpoints";
 import { adminDashboardMock } from "@/data/admin-mock";
 import type { AdminDashboardData } from "@/types/admin";
-import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "./runtime";
+import { getLiveApiSession } from "@/lib/data/api-session";
+import { shouldUseMockData } from "./runtime";
 
 type ApiSummary = {
   totalRopa: number;
@@ -8,19 +10,33 @@ type ApiSummary = {
 };
 type ApiUser = { id: string; name: string; role: string; department?: { name?: string | null } | null };
 
+function emptyAdminDashboard(loadError: string): AdminDashboardData {
+  return {
+    source: "api",
+    loadError,
+    totalUsers: 0,
+    totalDepartments: 0,
+    totalRopa: 0,
+    systemOnline: false,
+    departmentWorkload: [],
+    latestUsers: [],
+    recentLogs: [],
+  };
+}
+
 async function fetchDashboardFromApi(): Promise<AdminDashboardData | null> {
-  const base = getApiBaseUrl();
-  const token = await getAuthTokenFromCookie();
-  if (!base || !token) return null;
+  const session = await getLiveApiSession();
+  if (!session.ok) return null;
 
   try {
+    const base = session.base.replace(/\/$/, "");
     const [summaryRes, usersRes] = await Promise.all([
-      fetch(`${base}/api/dashboard/summary`, {
-        headers: { Authorization: `Bearer ${token}` },
+      fetch(`${base}${apiPathAdminDashboardSummary()}`, {
+        headers: { Authorization: `Bearer ${session.token}` },
         cache: "no-store",
       }),
-      fetch(`${base}/api/users`, {
-        headers: { Authorization: `Bearer ${token}` },
+      fetch(`${base}${apiPathUsers()}`, {
+        headers: { Authorization: `Bearer ${session.token}` },
         cache: "no-store",
       }),
     ]);
@@ -46,6 +62,7 @@ async function fetchDashboardFromApi(): Promise<AdminDashboardData | null> {
 
     return {
       source: "api",
+      loadError: null,
       totalUsers: users.length,
       totalDepartments: new Set(users.map((u) => u.department?.name ?? "Unknown")).size,
       totalRopa: summary.totalRopa ?? 0,
@@ -58,10 +75,7 @@ async function fetchDashboardFromApi(): Promise<AdminDashboardData | null> {
         department: u.department?.name || "Unknown",
         status: "active",
       })),
-      recentLogs: [
-        "กิจกรรมล่าสุดจาก backend - 1 min ago",
-        "ข้อมูลนี้จะถูกแทนด้วย API logs จริงในอนาคต",
-      ],
+      recentLogs: [],
     };
   } catch {
     return null;
@@ -70,5 +84,11 @@ async function fetchDashboardFromApi(): Promise<AdminDashboardData | null> {
 
 export async function getAdminDashboardData(): Promise<AdminDashboardData> {
   if (shouldUseMockData()) return adminDashboardMock;
-  return (await fetchDashboardFromApi()) ?? adminDashboardMock;
+  const api = await fetchDashboardFromApi();
+  if (api) return api;
+  const session = await getLiveApiSession();
+  if (!session.ok) {
+    return emptyAdminDashboard(session.error);
+  }
+  return emptyAdminDashboard("โหลดข้อมูลแดชบอร์ดผู้ดูแลระบบไม่สำเร็จ");
 }

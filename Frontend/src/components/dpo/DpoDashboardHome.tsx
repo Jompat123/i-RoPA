@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { DataSourceBanner } from "@/components/common/DataSourceBanner";
 import type { DpoDashboardData } from "@/types/dpo";
 
 type Props = { data: DpoDashboardData };
@@ -44,6 +45,7 @@ export function DpoDashboardHome({ data }: Props) {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+      <DataSourceBanner source={data.source} loadError={data.loadError ?? null} />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         {[
           {
@@ -160,23 +162,20 @@ export function DpoDashboardHome({ data }: Props) {
       </div>
 
       <section className="rounded-2xl border border-slate-100 bg-white shadow-sm">
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+        <div className="border-b border-slate-100 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-800">บันทึกกิจกรรมล่าสุด</h2>
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-semibold ${
-              data.source === "api" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-            }`}
-          >
-            {data.source === "api" ? "ข้อมูลจริง" : "Mock"}
-          </span>
+          <p className="mt-1 text-xs text-slate-500">รอ endpoint audit log จาก backend</p>
         </div>
         <div className="h-56 overflow-y-scroll px-5 py-3 text-sm text-slate-600">
-          {data.recentLogs.map((log, index) => (
-            <p key={index} className="border-b border-slate-100 py-2 last:border-0">
-              {log}
-            </p>
-          ))}
-          {data.recentLogs.length === 0 ? <p>ยังไม่มีบันทึกกิจกรรม</p> : null}
+          {data.recentLogs.length === 0 ? (
+            <p className="py-2 text-slate-500">ยังไม่มีบันทึกกิจกรรม</p>
+          ) : (
+            data.recentLogs.map((log, index) => (
+              <p key={index} className="border-b border-slate-100 py-2 last:border-0">
+                {log}
+              </p>
+            ))
+          )}
         </div>
       </section>
     </div>

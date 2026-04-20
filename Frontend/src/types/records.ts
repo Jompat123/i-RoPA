@@ -19,6 +19,8 @@ export type MyItemsStats = {
 
 export type MyItemsPageData = {
   source: "api" | "mock";
+  /** เมื่อคาดหวังข้อมูลจริงแต่โหลดไม่ได้ */
+  loadError?: string | null;
   rows: MyItemRecord[];
   stats: MyItemsStats;
   departments: string[];
@@ -48,6 +50,7 @@ export type DestructionRow = {
 
 export type DestructionPageData = {
   source: "api" | "mock";
+  loadError?: string | null;
   rows: DestructionRow[];
   departments: string[];
   currentPage: number;

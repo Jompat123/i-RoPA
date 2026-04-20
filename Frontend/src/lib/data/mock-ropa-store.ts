@@ -1,4 +1,8 @@
-type MockRopaEntry = {
+/**
+ * Mock persistence เมื่อ `USE_MOCK_DATA` — เก็บในหน่วยความจำของโปรเซส Node
+ * รีสตาร์ท dev server แล้วข้อมูลจะกลับไปชุด seed เริ่มต้น
+ */
+export type MockRopaEntry = {
   id: string;
   referenceCode: string;
   processName: string;
@@ -26,6 +30,10 @@ type MockRopaEntry = {
   securityOrg?: string | null;
   reviewNote?: string | null;
   reviewChecks?: unknown[];
+  /** ผู้ควบคุม vs ผู้ประมวลผล (ขั้นตอนที่ 1) */
+  ropaRole?: "controller" | "processor" | null;
+  /** ข้อ 14 — มีเมื่อเป็น controller */
+  rightsRefusalNote?: string | null;
 };
 
 type StoreState = { rows: MockRopaEntry[] };
@@ -64,6 +72,8 @@ function seedRows(): MockRopaEntry[] {
       securityOrg: "Role-based policy",
       reviewNote: null,
       reviewChecks: [],
+      ropaRole: "controller",
+      rightsRefusalNote: "ยังไม่มีเคสปฏิเสธคำขอ (บันทึกตามนโยบายองค์กร)",
     },
     {
       id: "mock-2",
@@ -93,6 +103,8 @@ function seedRows(): MockRopaEntry[] {
       securityOrg: "DPO review",
       reviewNote: "กรุณาเพิ่มรายละเอียด transfer method และมาตรฐานคุ้มครอง",
       reviewChecks: [],
+      ropaRole: "processor",
+      rightsRefusalNote: null,
     },
     {
       id: "mock-3",
@@ -122,6 +134,8 @@ function seedRows(): MockRopaEntry[] {
       securityOrg: "Retention policy",
       reviewNote: null,
       reviewChecks: [],
+      ropaRole: "controller",
+      rightsRefusalNote: "",
     },
   ];
 }
@@ -174,6 +188,8 @@ export function createMockRopa(payload: Partial<MockRopaEntry>): MockRopaEntry {
     securityOrg: payload.securityOrg ?? null,
     reviewNote: payload.reviewNote ?? null,
     reviewChecks: payload.reviewChecks ?? [],
+    ropaRole: payload.ropaRole ?? "controller",
+    rightsRefusalNote: payload.rightsRefusalNote ?? null,
   };
   store.rows.unshift(row);
   return row;

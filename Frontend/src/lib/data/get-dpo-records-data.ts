@@ -1,9 +1,12 @@
-import { dpoRecordsMock } from "@/data/dpo-mock";
+import { apiPathRopaList } from "@/config/api-endpoints";
+import type { MockRopaEntry } from "@/lib/data/mock-ropa-store";
 import { listMockRopa } from "@/lib/data/mock-ropa-store";
-import type { DpoRecordRow, DpoRecordsData } from "@/types/dpo";
-import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "./runtime";
+import type { DpoRecordRow, DpoRecordsData, RopaEntityRole } from "@/types/dpo";
+import { getLiveApiSession } from "@/lib/data/api-session";
+import { shouldUseMockData } from "./runtime";
 
 type Query = Record<string, string | string[] | undefined>;
+
 type ApiRopa = {
   id: string;
   processName?: string | null;
@@ -13,6 +16,12 @@ type ApiRopa = {
   retentionPeriod?: string | null;
   dataType?: string | null;
   purpose?: string | null;
+  ropaRole?: string | null;
+  dataControllerRole?: string | null;
+  rightsRefusalNote?: string | null;
+  securityTech?: string | null;
+  securityPhysical?: string | null;
+  securityOrg?: string | null;
 };
 
 function getParam(q: Query, key: string): string {
@@ -21,22 +30,78 @@ function getParam(q: Query, key: string): string {
   return (value ?? "").trim();
 }
 
+function parseApiRole(raw: unknown): RopaEntityRole {
+  const s = String(raw ?? "").toUpperCase();
+  if (s === "PROCESSOR" || s === "DATA_PROCESSOR") return "processor";
+  return "controller";
+}
+
+function buildSecuritySummary(
+  role: RopaEntityRole,
+  tech?: string | null,
+  physical?: string | null,
+  org?: string | null,
+): string | null {
+  if (role === "processor") return null;
+  const parts = [tech, physical, org]
+    .map((x) => (typeof x === "string" ? x.trim() : ""))
+    .filter(Boolean);
+  return parts.length ? parts.join(" | ") : null;
+}
+
+function fromMockEntry(row: MockRopaEntry): DpoRecordRow {
+  const role: RopaEntityRole = row.ropaRole === "processor" ? "processor" : "controller";
+  return {
+    id: row.id,
+    role,
+    processName: row.processName || "-",
+    department: row.department?.name || "Unknown",
+    purpose: row.purpose || "-",
+    dataType: row.dataType || "-",
+    legalBasis: row.legalBasis || "-",
+    retentionPeriod: row.retentionPeriod || "-",
+    rightsRefusalNote: role === "processor" ? null : row.rightsRefusalNote ?? null,
+    securityMeasuresSummary: buildSecuritySummary(role, row.securityTech, row.securityPhysical, row.securityOrg),
+  };
+}
+
+function fromApiEntry(row: ApiRopa): DpoRecordRow {
+  const role = parseApiRole(row.ropaRole ?? row.dataControllerRole);
+  return {
+    id: row.id,
+    role,
+    processName: row.processName || "-",
+    department: row.department?.name || "Unknown",
+    purpose: row.purpose || "-",
+    dataType: row.dataType || "-",
+    legalBasis: row.legalBasis || "-",
+    retentionPeriod: row.retentionPeriod || "-",
+    rightsRefusalNote: role === "processor" ? null : row.rightsRefusalNote ?? null,
+    securityMeasuresSummary: buildSecuritySummary(
+      role,
+      row.securityTech,
+      row.securityPhysical,
+      row.securityOrg,
+    ),
+  };
+}
+
 function normalizeRows(rows: ApiRopa[]): DpoRecordRow[] {
   return rows
     .filter((row) => {
       const status = String(row.status || "").toUpperCase();
       return status === "COMPLETE" || status === "APPROVED";
     })
-    .map((row) => ({
-      id: row.id,
-      processName: row.processName || "-",
-      department: row.department?.name || "Unknown",
-      purpose: row.purpose || "-",
-      dataType: row.dataType || "-",
-      legalBasis: row.legalBasis || "-",
-      retentionPeriod: row.retentionPeriod || "-",
-      security: "-",
-    }));
+    .map(fromApiEntry);
+}
+
+function normalizeMockRows(rows: MockRopaEntry[]): DpoRecordRow[] {
+  return rows
+    .filter((row) => {
+      const status = String(row.status || "").toUpperCase();
+      return status === "COMPLETE" || status === "APPROVED";
+    })
+    .map(fromMockEntry);
 }
 
 function filterRows(
@@ -54,13 +119,12 @@ function filterRows(
 }
 
 async function fetchApiRows(): Promise<DpoRecordRow[] | null> {
-  const base = getApiBaseUrl();
-  const token = await getAuthTokenFromCookie();
-  if (!base || !token) return null;
+  const session = await getLiveApiSession();
+  if (!session.ok) return null;
 
   try {
-    const res = await fetch(`${base}/api/ropa`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetch(`${session.base.replace(/\/$/, "")}${apiPathRopaList()}`, {
+      headers: { Authorization: `Bearer ${session.token}` },
       cache: "no-store",
     });
     if (!res.ok) return null;
@@ -77,25 +141,38 @@ export async function getDpoRecordsData(searchParams: Query): Promise<DpoRecords
   const dataType = getParam(searchParams, "dataType");
   const legalBasis = getParam(searchParams, "legalBasis");
 
-  const mockRows = normalizeRows(
-    listMockRopa().map((row) => ({
-      id: row.id,
-      processName: row.processName,
-      status: row.status,
-      department: row.department ?? null,
-      legalBasis: row.legalBasis ?? null,
-      retentionPeriod: row.retentionPeriod ?? null,
-      dataType: row.dataType ?? null,
-      purpose: row.purpose ?? null,
-    })),
-  );
-  const apiRows = shouldUseMockData() ? null : await fetchApiRows();
-  const source: "api" | "mock" = apiRows ? "api" : "mock";
-  const baseRows = apiRows ?? (shouldUseMockData() ? mockRows : dpoRecordsMock.rows);
+  const mockRows = normalizeMockRows(listMockRopa());
+  let baseRows: DpoRecordRow[];
+  let source: "api" | "mock";
+  let loadError: string | null = null;
+
+  if (shouldUseMockData()) {
+    baseRows = mockRows;
+    source = "mock";
+  } else {
+    const session = await getLiveApiSession();
+    if (!session.ok) {
+      baseRows = [];
+      source = "api";
+      loadError = session.error;
+    } else {
+      const apiRows = await fetchApiRows();
+      if (apiRows) {
+        baseRows = apiRows;
+        source = "api";
+      } else {
+        baseRows = [];
+        source = "api";
+        loadError = "โหลดบันทึกกิจกรรมจากเซิร์ฟเวอร์ไม่สำเร็จ";
+      }
+    }
+  }
+
   const rows = filterRows(baseRows, department, dataType, legalBasis);
 
   return {
     source,
+    loadError,
     rows,
     filters: { department, dataType, legalBasis },
     departments: [...new Set(baseRows.map((x) => x.department))],

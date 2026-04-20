@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { DataSourceBanner } from "@/components/common/DataSourceBanner";
 import { type ActivityStatus, type SummaryCardType } from "@/data/dashboard-mock";
 import type { DashboardPageData } from "@/lib/data/get-dashboard-page-data";
 
@@ -60,10 +61,12 @@ type DashboardHomeProps = {
 };
 
 export function DashboardHome({ data }: DashboardHomeProps) {
-  const { summaryCards, taskList, recentActivities } = data;
+  const { summaryCards, taskList, recentActivities, tasksSource, summarySource, summaryLoadError } =
+    data;
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+      <DataSourceBanner source={summarySource} loadError={summaryLoadError ?? null} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-4">
         {summaryCards.map((card) => (
           <div
@@ -97,7 +100,9 @@ export function DashboardHome({ data }: DashboardHomeProps) {
               </Link>
               <button
                 type="button"
-                className="flex w-full items-center justify-center gap-3 rounded-xl bg-[#22a345] px-4 py-3 font-medium text-white transition hover:bg-green-700"
+                disabled
+                title="ฟีเจอร์นี้จะเปิดเมื่อ backend พร้อม"
+                className="flex w-full cursor-not-allowed items-center justify-center gap-3 rounded-xl bg-[#22a345]/60 px-4 py-3 font-medium text-white"
               >
                 <Upload className="h-5 w-5 shrink-0" strokeWidth={2} aria-hidden />
                 อัปโหลด Excel ใหม่
@@ -109,16 +114,22 @@ export function DashboardHome({ data }: DashboardHomeProps) {
             <h2 className="mb-4 text-lg font-semibold text-slate-800">
               รายการงาน
             </h2>
-            <ul className="flex flex-col gap-4">
-              {taskList.map((task, index) => (
-                <li
-                  key={index}
-                  className="border-b border-slate-100 pb-4 text-sm text-slate-700 last:border-0 last:pb-0"
-                >
-                  {task}
-                </li>
-              ))}
-            </ul>
+            {tasksSource === "empty" && taskList.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                ยังไม่มีรายการงาน — รอ endpoint จาก backend หรือเชื่อม API ภายหลัง
+              </p>
+            ) : (
+              <ul className="flex flex-col gap-4">
+                {taskList.map((task, index) => (
+                  <li
+                    key={index}
+                    className="border-b border-slate-100 pb-4 text-sm text-slate-700 last:border-0 last:pb-0"
+                  >
+                    {task}
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </div>
 
@@ -137,26 +148,34 @@ export function DashboardHome({ data }: DashboardHomeProps) {
                 </tr>
               </thead>
               <tbody className="text-sm text-slate-700">
-                {recentActivities.map((row) => {
-                  const { label, className: badgeClass } = statusBadge(row.status);
-                  return (
-                    <tr
-                      key={row.id}
-                      className="border-b border-slate-50 transition last:border-0 hover:bg-slate-50/80"
-                    >
-                      <td className="py-4 pl-2 pr-2">{row.name}</td>
-                      <td className="py-4 pl-2 pr-2">{row.department}</td>
-                      <td className="py-4 pl-2 pr-2 tabular-nums">{row.date}</td>
-                      <td className="py-4 pl-2 pr-2 text-right">
-                        <span
-                          className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${badgeClass}`}
-                        >
-                          {label}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {recentActivities.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-8 pl-2 text-center text-slate-500">
+                      ยังไม่มีกิจกรรมล่าสุด — รอ endpoint จาก backend
+                    </td>
+                  </tr>
+                ) : (
+                  recentActivities.map((row) => {
+                    const { label, className: badgeClass } = statusBadge(row.status);
+                    return (
+                      <tr
+                        key={row.id}
+                        className="border-b border-slate-50 transition last:border-0 hover:bg-slate-50/80"
+                      >
+                        <td className="py-4 pl-2 pr-2">{row.name}</td>
+                        <td className="py-4 pl-2 pr-2">{row.department}</td>
+                        <td className="py-4 pl-2 pr-2 tabular-nums">{row.date}</td>
+                        <td className="py-4 pl-2 pr-2 text-right">
+                          <span
+                            className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${badgeClass}`}
+                          >
+                            {label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

@@ -1,4 +1,4 @@
-import { dpoQueueMock } from "@/data/dpo-mock";
+import { apiPathRopaItem, apiPathRopaList } from "@/config/api-endpoints";
 import { getMockRopaById, listMockRopa } from "@/lib/data/mock-ropa-store";
 import type {
   DpoReviewDetailData,
@@ -6,7 +6,8 @@ import type {
   DpoReviewRow,
   DpoReviewStatus,
 } from "@/types/dpo";
-import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "./runtime";
+import { getLiveApiSession } from "@/lib/data/api-session";
+import { shouldUseMockData } from "./runtime";
 
 type Query = Record<string, string | string[] | undefined>;
 type ApiRopa = {
@@ -171,12 +172,11 @@ function applyFilters(
 }
 
 async function fetchApiRows(): Promise<DpoReviewRow[] | null> {
-  const base = getApiBaseUrl();
-  const token = await getAuthTokenFromCookie();
-  if (!base || !token) return null;
+  const session = await getLiveApiSession();
+  if (!session.ok) return null;
   try {
-    const res = await fetch(`${base}/api/ropa`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetch(`${session.base.replace(/\/$/, "")}${apiPathRopaList()}`, {
+      headers: { Authorization: `Bearer ${session.token}` },
       cache: "no-store",
     });
     if (!res.ok) return null;
@@ -189,13 +189,12 @@ async function fetchApiRows(): Promise<DpoReviewRow[] | null> {
 }
 
 async function fetchApiDetail(id: string): Promise<DpoReviewDetailData | null> {
-  const base = getApiBaseUrl();
-  const token = await getAuthTokenFromCookie();
-  if (!base || !token) return null;
+  const session = await getLiveApiSession();
+  if (!session.ok) return null;
 
   try {
-    const res = await fetch(`${base}/api/ropa/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetch(`${session.base.replace(/\/$/, "")}${apiPathRopaItem(id)}`, {
+      headers: { Authorization: `Bearer ${session.token}` },
       cache: "no-store",
     });
     if (!res.ok) return null;
@@ -241,9 +240,33 @@ export async function getDpoReviewsData(searchParams: Query): Promise<DpoReviewQ
       createdBy: row.createdBy ?? null,
     })),
   );
-  const apiRows = shouldUseMockData() ? null : await fetchApiRows();
-  const source: "api" | "mock" = apiRows ? "api" : "mock";
-  const baseRows = apiRows ?? (shouldUseMockData() ? mockRows : dpoQueueMock.rows);
+
+  let baseRows: DpoReviewRow[];
+  let source: "api" | "mock";
+  let loadError: string | null = null;
+
+  if (shouldUseMockData()) {
+    baseRows = mockRows;
+    source = "mock";
+  } else {
+    const session = await getLiveApiSession();
+    if (!session.ok) {
+      baseRows = [];
+      source = "api";
+      loadError = session.error;
+    } else {
+      const apiRows = await fetchApiRows();
+      if (apiRows) {
+        baseRows = apiRows;
+        source = "api";
+      } else {
+        baseRows = [];
+        source = "api";
+        loadError = "โหลดคิวอนุมัติจากเซิร์ฟเวอร์ไม่สำเร็จ";
+      }
+    }
+  }
+
   const rows = applyFilters(baseRows, q, status, department);
   const departments = [...new Set(baseRows.map((r) => r.department))].sort((a, b) =>
     a.localeCompare(b, "th"),
@@ -251,6 +274,7 @@ export async function getDpoReviewsData(searchParams: Query): Promise<DpoReviewQ
 
   return {
     source,
+    loadError,
     rows,
     departments,
     filters: { q, status, department },

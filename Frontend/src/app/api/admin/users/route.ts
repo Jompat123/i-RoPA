@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+
+import { apiPathUsers } from "@/config/api-endpoints";
 import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/data/runtime";
 
 type CreateUserPayload = {
@@ -19,7 +21,7 @@ export async function GET() {
   if (!base || !token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const res = await fetch(`${base}/api/users`, {
+    const res = await fetch(`${base.replace(/\/$/, "")}${apiPathUsers()}`, {
       headers: { Authorization: `Bearer ${token}` },
       cache: "no-store",
     });
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
   if (!base || !token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const res = await fetch(`${base}/api/users`, {
+    const res = await fetch(`${base.replace(/\/$/, "")}${apiPathUsers()}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,

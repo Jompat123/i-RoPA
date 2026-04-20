@@ -27,7 +27,15 @@ export function Sidebar({ user }: SidebarProps) {
       <div className="flex w-full flex-col items-center p-8">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10">
-            <Image src="/images/logo.png" alt="i-RoPA logo" width={24} height={24} />
+            <Image
+              src="/images/logo.png"
+              alt="i-RoPA logo"
+              width={80}
+              height={80}
+              quality={95}
+              sizes="32px"
+              className="h-8 w-8 object-contain"
+            />
           </div>
           <span className="flex items-center text-2xl font-semibold text-white">
             i-RoPA

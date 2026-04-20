@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+
+import { apiPathRopaList } from "@/config/api-endpoints";
 import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/data/runtime";
 import { createMockRopa } from "@/lib/data/mock-ropa-store";
 
@@ -71,7 +73,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const res = await fetch(`${base}/api/ropa`, {
+    const res = await fetch(`${base.replace(/\/$/, "")}${apiPathRopaList()}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
