@@ -1,0 +1,12 @@
+{
+  "name": "i-ropa",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix Frontend",
+    "dev:stop": "bash scripts/kill-dev-ports.sh",
+    "dev:fresh": "npm run dev:stop && npm run dev",
+    "build": "npm run build --prefix Frontend",
+    "lint": "npm run lint --prefix Frontend",
+    "start": "npm run start --prefix Frontend"
+  }
+}

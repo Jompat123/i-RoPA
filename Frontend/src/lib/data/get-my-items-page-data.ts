@@ -1,0 +1,146 @@
+import { myItemsMockRows } from "@/data/records-mock";
+import { listMockRopa } from "@/lib/data/mock-ropa-store";
+import type { ItemStatus, MyItemRecord, MyItemsPageData } from "@/types/records";
+import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "./runtime";
+const PAGE_SIZE = 9999;
+
+type Query = Record<string, string | string[] | undefined>;
+
+type ApiRopaEntry = {
+  id: string;
+  processName: string;
+  status: string;
+  updatedAt: string;
+  createdAt: string;
+  referenceCode?: string;
+  department?: { name?: string | null } | null;
+};
+
+function getParam(q: Query, key: string): string {
+  const v = q[key];
+  const val = Array.isArray(v) ? v[0] : v;
+  return (val ?? "").trim();
+}
+
+function toThaiDateLabel(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const year = date.getFullYear() + 543;
+  return `${day}/${month}/${year}`;
+}
+
+function mapStatus(status: string): ItemStatus {
+  const s = status.toUpperCase();
+  if (s === "DRAFT") return "draft";
+  if (s === "COMPLETE" || s === "APPROVED") return "approved";
+  if (s === "REJECTED" || s === "NEEDS_FIX") return "needs_fix";
+  if (s === "PENDING" || s === "SUBMITTED" || s === "IN_REVIEW") return "pending";
+  return "pending";
+}
+
+function codeFromRow(row: ApiRopaEntry, index: number): string {
+  if (row.referenceCode && row.referenceCode.trim()) return row.referenceCode.trim();
+  const year = new Date(row.createdAt).getFullYear() || 2023;
+  const suffix = String(index + 1).padStart(3, "0");
+  return `ROPA-${year}-${suffix}`;
+}
+
+function normalizeFromApi(rows: ApiRopaEntry[]): MyItemRecord[] {
+  return rows.map((row, index) => ({
+    id: row.id,
+    code: codeFromRow(row, index),
+    activityName: row.processName || "-",
+    updatedAtLabel: toThaiDateLabel(row.updatedAt),
+    departmentName: row.department?.name || "ไม่ระบุแผนก",
+    status: mapStatus(row.status),
+  }));
+}
+
+function collectStats(rows: MyItemRecord[]) {
+  return {
+    total: rows.length,
+    draft: rows.filter((r) => r.status === "draft").length,
+    pending: rows.filter((r) => r.status === "pending").length,
+    needsFix: rows.filter((r) => r.status === "needs_fix").length,
+    approved: rows.filter((r) => r.status === "approved").length,
+  };
+}
+
+function applyFilters(rows: MyItemRecord[], q: string, status: string, department: string) {
+  return rows.filter((row) => {
+    const matchesQ =
+      !q ||
+      row.code.toLowerCase().includes(q) ||
+      row.activityName.toLowerCase().includes(q) ||
+      row.departmentName.toLowerCase().includes(q);
+
+    const matchesStatus = status === "all" || row.status === status;
+    const matchesDepartment = !department || row.departmentName === department;
+
+    return matchesQ && matchesStatus && matchesDepartment;
+  });
+}
+
+async function fetchApiRows(): Promise<MyItemRecord[] | null> {
+  const base = getApiBaseUrl();
+  const token = await getAuthTokenFromCookie();
+  if (!base || !token) return null;
+
+  try {
+    const res = await fetch(`${base}/api/ropa`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as ApiRopaEntry[];
+    if (!Array.isArray(json)) return null;
+    return normalizeFromApi(json);
+  } catch {
+    return null;
+  }
+}
+
+export async function getMyItemsPageData(searchParams: Query): Promise<MyItemsPageData> {
+  const q = getParam(searchParams, "q").toLowerCase();
+  const status = (getParam(searchParams, "status") || "all") as "all" | ItemStatus;
+  const department = getParam(searchParams, "department");
+
+  const mockRows = normalizeFromApi(
+    listMockRopa().map((row) => ({
+      id: row.id,
+      processName: row.processName,
+      status: row.status,
+      updatedAt: row.updatedAt,
+      createdAt: row.createdAt,
+      referenceCode: row.referenceCode,
+      department: row.department ?? null,
+    })),
+  );
+  const apiRows = shouldUseMockData() ? null : await fetchApiRows();
+  const source: "api" | "mock" = apiRows ? "api" : "mock";
+  const rawRows = apiRows ?? (shouldUseMockData() ? mockRows : myItemsMockRows);
+
+  const filteredRows = applyFilters(rawRows, q, status, department);
+  const pagedRows = filteredRows;
+
+  const departments = [...new Set(rawRows.map((r) => r.departmentName))].sort((a, b) =>
+    a.localeCompare(b, "th"),
+  );
+
+  return {
+    source,
+    rows: pagedRows,
+    stats: collectStats(rawRows),
+    departments,
+    currentPage: 1,
+    totalPages: 1,
+    pageSize: PAGE_SIZE,
+    filters: {
+      q: getParam(searchParams, "q"),
+      status,
+      department,
+    },
+  };
+}

@@ -1,0 +1,214 @@
+import type {
+  DpoDashboardData,
+  DpoRecordRow,
+  DpoReviewDetailData,
+  DpoReviewQueueData,
+  DpoReviewRow,
+  DpoRecordsData,
+} from "@/types/dpo";
+
+export const dpoMockRows: DpoReviewRow[] = [
+  {
+    id: "r-1",
+    code: "ROPA-2023-001",
+    processName: "การประมวลผลข้อมูลลูกค้า",
+    department: "Marketing",
+    submittedAtLabel: "10/11/2566",
+    ownerName: "John Doe",
+    status: "pending",
+  },
+  {
+    id: "r-2",
+    code: "ROPA-2023-002",
+    processName: "การจัดการข้อมูลพนักงาน",
+    department: "HR",
+    submittedAtLabel: "08/11/2566",
+    ownerName: "Jane Smith",
+    status: "approved",
+  },
+  {
+    id: "r-3",
+    code: "ROPA-2023-003",
+    processName: "การเก็บข้อมูลผู้ติดต่อ",
+    department: "Operations",
+    submittedAtLabel: "05/11/2566",
+    ownerName: "Michael Brown",
+    status: "needs_fix",
+  },
+  {
+    id: "r-4",
+    code: "ROPA-2023-004",
+    processName: "การประเมินพนักงาน",
+    department: "HR",
+    submittedAtLabel: "02/11/2566",
+    ownerName: "Emily Davis",
+    status: "pending",
+  },
+];
+
+export const dpoDashboardMock: DpoDashboardData = {
+  source: "mock",
+  summary: {
+    pending: dpoMockRows.filter((r) => r.status === "pending").length,
+    approved: dpoMockRows.filter((r) => r.status === "approved").length,
+    needsFix: dpoMockRows.filter((r) => r.status === "needs_fix").length,
+  },
+  workflow: {
+    newPending: 2,
+    updatePending: 1,
+    revisionRequired: dpoMockRows.filter((r) => r.status === "needs_fix").length,
+    alertCount: dpoMockRows.length,
+  },
+  departmentStatus: [
+    {
+      department: "HR",
+      approved: 1,
+      pending: 1,
+      needsFix: 0,
+    },
+    {
+      department: "Marketing",
+      approved: 0,
+      pending: 1,
+      needsFix: 0,
+    },
+    {
+      department: "Operations",
+      approved: 0,
+      pending: 0,
+      needsFix: 1,
+    },
+    {
+      department: "Finance",
+      approved: 1,
+      pending: 0,
+      needsFix: 1,
+    },
+  ],
+  legalBasisDistribution: [
+    { key: "consent", label: "Consent", count: 4 },
+    { key: "contract", label: "Contract", count: 5 },
+    { key: "legitimate_interest", label: "Legitimate Interest", count: 3 },
+    { key: "legal_obligation", label: "Legal Obligation", count: 2 },
+  ],
+  latestQueue: dpoMockRows.slice(0, 4),
+  recentLogs: [
+    "DPO reviewed ROPA-2023-001 - 2 mins ago",
+    "DPO approved ROPA-2023-002 - 5 mins ago",
+    "DPO returned ROPA-2023-003 - 7 mins ago",
+  ],
+};
+
+export const dpoQueueMock: DpoReviewQueueData = {
+  source: "mock",
+  rows: dpoMockRows,
+  departments: [...new Set(dpoMockRows.map((r) => r.department))].sort((a, b) =>
+    a.localeCompare(b, "th"),
+  ),
+  filters: {
+    q: "",
+    status: "all",
+    department: "",
+  },
+};
+
+export const dpoReviewDetailMock: DpoReviewDetailData = {
+  source: "mock",
+  id: "r-1",
+  code: "ROPA-2023-001",
+  processName: "การประมวลผลข้อมูลลูกค้า",
+  department: "Marketing",
+  ownerName: "John Doe",
+  status: "pending",
+  submittedAtLabel: "10/11/2566",
+  summary: {
+    purpose: "เพื่อบริหารความสัมพันธ์ลูกค้าและทำการตลาด",
+    legalBasis: "Contract, Legitimate Interest",
+    retentionPeriod: "5 ปี",
+    transferCountry: "Singapore",
+  },
+  stepForms: [
+    {
+      id: "step1",
+      label: "ขั้นตอนที่ 1: ข้อมูลกิจกรรม",
+      fields: [
+        { label: "บทบาท", value: "Controller" },
+        { label: "ข้อมูลผู้ควบคุม/ผู้ประมวลผล", value: "บริษัทตัวอย่าง จำกัด" },
+        { label: "กิจกรรมประมวลผล", value: "การประมวลผลข้อมูลลูกค้า" },
+        { label: "วัตถุประสงค์", value: "เพื่อบริหารความสัมพันธ์ลูกค้าและทำการตลาด" },
+      ],
+    },
+    {
+      id: "step2",
+      label: "ขั้นตอนที่ 2: ข้อมูลที่จัดเก็บ",
+      fields: [
+        { label: "ข้อมูลส่วนบุคคลที่จัดเก็บ", value: "ชื่อ, เบอร์โทร, อีเมล" },
+        { label: "หมวดหมู่ข้อมูล", value: "ลูกค้า" },
+        { label: "ประเภทข้อมูล", value: "ข้อมูลทั่วไป" },
+      ],
+    },
+    {
+      id: "step3",
+      label: "ขั้นตอนที่ 3: ฐานทางกฎหมาย",
+      fields: [
+        { label: "ฐานทางกฎหมาย", value: "Contract, Legitimate Interest" },
+        { label: "การโอนข้อมูลข้ามประเทศ", value: "Singapore" },
+      ],
+    },
+    {
+      id: "step4",
+      label: "ขั้นตอนที่ 4: การจัดเก็บและทำลาย",
+      fields: [
+        { label: "วิธีการเก็บรักษา", value: "เก็บในระบบ Cloud ที่เข้ารหัส" },
+        { label: "ระยะเวลาจัดเก็บ", value: "5 ปี" },
+        { label: "วิธีการลบข้อมูล", value: "ลบถาวรจากระบบและสำรองข้อมูล" },
+      ],
+    },
+  ],
+};
+
+export const dpoRecordsMockRows: DpoRecordRow[] = [
+  {
+    id: "1",
+    processName: "ออกใบกำกับภาษีอิเล็กทรอนิกส์ (e-Tax)",
+    department: "บัญชี/ลูกค้า",
+    purpose: "เพื่อทำบัญชีส่งภาษี",
+    dataType: "ชื่อ, ที่อยู่, เลขภาษี",
+    legalBasis: "หน้าที่ตามกฎหมาย",
+    retentionPeriod: "10 ปี",
+    security: "เข้ารหัสข้อมูล, จำกัดสิทธิ์การเข้าถึง",
+  },
+  {
+    id: "2",
+    processName: "จัดส่งพัสดุลูกค้า (e-Waybill)",
+    department: "ขนส่ง/ลูกค้า",
+    purpose: "เพื่อส่งมอบสินค้า",
+    dataType: "ชื่อ, ที่อยู่, เบอร์โทร",
+    legalBasis: "ฐานสัญญา",
+    retentionPeriod: "5 ปี",
+    security: "จำกัดสิทธิ์การเข้าถึง",
+  },
+  {
+    id: "4",
+    processName: "รับสมัครพนักงานใหม่",
+    department: "HR/ผู้สมัคร",
+    purpose: "เพื่อคัดเลือกบุคลากร",
+    dataType: "ชื่อ, ประวัติ, ข้อมูลอ่อนไหว",
+    legalBasis: "ฐานสัญญา/ความยินยอม",
+    retentionPeriod: "3 ปี",
+    security: "จำกัดสิทธิ์การเข้าถึง",
+  },
+];
+
+export const dpoRecordsMock: DpoRecordsData = {
+  source: "mock",
+  rows: dpoRecordsMockRows,
+  filters: {
+    department: "",
+    dataType: "",
+    legalBasis: "",
+  },
+  departments: [...new Set(dpoRecordsMockRows.map((r) => r.department))],
+  dataTypes: ["Data Type", "General", "Sensitive"],
+  legalBases: ["Lawful Basis", "Contract", "Consent", "Legal Obligation"],
+};
