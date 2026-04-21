@@ -16,6 +16,7 @@ export type MockRopaEntry = {
   retentionPeriod?: string | null;
   transferCountry?: string | null;
   dataSource?: string | null;
+  dataControllerAddress?: string | null;
   dataCategory?: string | null;
   dataType?: string | null;
   personalDataTypes?: string[] | string | null;
@@ -89,6 +90,7 @@ function seedRows(): MockRopaEntry[] {
       retentionPeriod: "10 ปี",
       transferCountry: "",
       dataSource: "ฝ่ายบุคคล",
+      dataControllerAddress: "บริษัทตัวอย่าง จำกัด, 123 ถนนสุขุมวิท กรุงเทพฯ 10110",
       dataCategory: "employee",
       dataType: "SENSITIVE",
       personalDataTypes: ["ชื่อ", "ที่อยู่", "ข้อมูลสุขภาพ"],
@@ -174,6 +176,7 @@ export function createMockRopa(payload: Partial<MockRopaEntry>): MockRopaEntry {
     retentionPeriod: payload.retentionPeriod ?? null,
     transferCountry: payload.transferCountry ?? null,
     dataSource: payload.dataSource ?? null,
+    dataControllerAddress: payload.dataControllerAddress ?? null,
     dataCategory: payload.dataCategory ?? null,
     dataType: payload.dataType ?? null,
     personalDataTypes: payload.personalDataTypes ?? [],

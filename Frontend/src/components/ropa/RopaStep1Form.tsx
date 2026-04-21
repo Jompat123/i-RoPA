@@ -56,6 +56,7 @@ type RopaWizardState = {
   // step 1
   role: Role;
   entityName: string;
+  controllerInfoAddress: string;
   activity: string;
   purpose: string;
   // step 2
@@ -87,10 +88,10 @@ type RopaWizardState = {
   securityMeasureNote: string;
 };
 
-const step1Fields = [
+const step1ControllerFields = [
   {
     id: "entityName",
-    label: "1. ข้อมูลเกี่ยวกับผู้ควบคุมข้อมูล / ชื่อผู้ประมวลผล",
+    label: "1. ข้อมูลเกี่ยวกับผู้ควบคุมข้อมูลส่วนบุคคล",
     placeholder: "(ชื่อหน่วยงาน หรือ ชื่อบริษัท)",
   },
   {
@@ -105,6 +106,29 @@ const step1Fields = [
   },
 ] as const;
 
+const step1ProcessorFields = [
+  {
+    id: "entityName",
+    label: "1. ชื่อผู้ประมวลผลข้อมูลส่วนบุคคล",
+    placeholder: "(ชื่อหน่วยงาน หรือ ชื่อบริษัท)",
+  },
+  {
+    id: "controllerInfoAddress",
+    label: "2. ข้อมูลและที่อยู่ของผู้ควบคุมข้อมูลส่วนบุคคล",
+    placeholder: "(ชื่อและที่อยู่ของผู้ควบคุมข้อมูลส่วนบุคคล)",
+  },
+  {
+    id: "activity",
+    label: "3. กิจกรรมประมวลผล",
+    placeholder: "(เช่น จัดงาน Event, ระบบรับสมัครงาน)",
+  },
+  {
+    id: "purpose",
+    label: "4. วัตถุประสงค์ของการประมวลผล",
+    placeholder: "(เช่น เพื่อเก็บเป็นข้อมูลผู้เข้าร่วมงาน)",
+  },
+] as const;
+
 const tagSuggestions = ["ชื่อ", "เบอร์โทร", "อีเมล", "ภาพถ่าย"] as const;
 
 type Props = {
@@ -115,7 +139,10 @@ type Props = {
 type ApiRopaDetail = {
   processName?: string | null;
   purpose?: string | null;
+  ropaRole?: string | null;
+  dataSource?: string | null;
   legalBasis?: string | null;
+  dataControllerAddress?: string | null;
   dataCategory?: string | null;
   dataType?: string | null;
   personalDataTypes?: string[] | string | null;
@@ -147,6 +174,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
   const [state, setState] = useState<RopaWizardState>({
     role: "controller",
     entityName: "",
+    controllerInfoAddress: "",
     activity: "",
     purpose: "",
     personalDataTags: [...tagSuggestions],
@@ -228,8 +256,10 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
 
         setState((prev) => ({
           ...prev,
+          role: String(payload.ropaRole || "").toLowerCase() === "processor" ? "processor" : prev.role,
           activity: payload.processName?.trim() || prev.activity,
           purpose: payload.purpose?.trim() || prev.purpose,
+          controllerInfoAddress: payload.dataControllerAddress?.trim() || prev.controllerInfoAddress,
           personalDataTags: personalDataTags.length ? personalDataTags : prev.personalDataTags,
           dataCategory:
             payload.dataCategory === "employee" ||
@@ -240,6 +270,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
               : prev.dataCategory,
           dataType: String(payload.dataType || "").toUpperCase() === "SENSITIVE" ? "sensitive" : "general",
           collectionSource: String(payload.collectionMethod || "").toUpperCase() === "OTHER" ? "other" : "direct",
+          entityName: payload.dataSource?.trim() || prev.entityName,
           legalBasis: legalBasis.length ? legalBasis : prev.legalBasis,
           crossBorderTransfer: Boolean(payload.crossBorderTransfer),
           transferCountry: payload.transferCountry?.trim() || "",
@@ -315,7 +346,14 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
 
   function validateStep(step: 1 | 2 | 3 | 4): string | null {
     if (step === 1) {
-      if (!state.entityName.trim()) return "กรุณากรอกข้อมูลผู้ควบคุมข้อมูล / ชื่อผู้ประมวลผล";
+      if (!state.entityName.trim()) {
+        return state.role === "processor"
+          ? "กรุณากรอกชื่อผู้ประมวลผลข้อมูลส่วนบุคคล"
+          : "กรุณากรอกข้อมูลผู้ควบคุมข้อมูลส่วนบุคคล";
+      }
+      if (state.role === "processor" && !state.controllerInfoAddress.trim()) {
+        return "กรุณากรอกข้อมูลและที่อยู่ของผู้ควบคุมข้อมูลส่วนบุคคล";
+      }
       if (!state.activity.trim()) return "กรุณากรอกกิจกรรมประมวลผล";
       if (!state.purpose.trim()) return "กรุณากรอกวัตถุประสงค์ของการประมวลผล";
       return null;
@@ -381,6 +419,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
         method: recordId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ropaRole: state.role,
           processName: state.activity || "แบบฟอร์มที่ยังไม่ระบุชื่อกิจกรรม",
           purpose: state.purpose || null,
           personalDataTypes: state.personalDataTags,
@@ -388,6 +427,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
           dataType: state.dataType === "sensitive" ? "SENSITIVE" : "GENERAL",
           collectionMethod: state.collectionSource === "direct" ? "DIRECT" : "OTHER",
           dataSource: state.entityName || null,
+          dataControllerAddress: state.role === "processor" ? state.controllerInfoAddress || null : null,
           legalBasis: state.legalBasis.join(","),
           crossBorderTransfer: state.crossBorderTransfer,
           transferCountry: state.transferCountry || null,
@@ -433,6 +473,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
     saveDraftLocally();
 
     const payload = {
+      ropaRole: state.role,
       processName: state.activity || "แบบฟอร์มที่ยังไม่ระบุชื่อกิจกรรม",
       purpose: state.purpose || null,
       personalDataTypes: state.personalDataTags,
@@ -440,6 +481,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
       dataType: state.dataType === "sensitive" ? "SENSITIVE" : "GENERAL",
       collectionMethod: state.collectionSource === "direct" ? "DIRECT" : "OTHER",
       dataSource: state.entityName || null,
+      dataControllerAddress: state.role === "processor" ? state.controllerInfoAddress || null : null,
       legalBasis: state.legalBasis.join(","),
       crossBorderTransfer: state.crossBorderTransfer,
       transferCountry: state.transferCountry || null,
@@ -615,7 +657,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
             </div>
 
             <div className="mt-10 space-y-8">
-              {step1Fields.map((field) => (
+              {(state.role === "processor" ? step1ProcessorFields : step1ControllerFields).map((field) => (
                 <div key={field.id} className="flex flex-col gap-2">
                   <label
                     htmlFor={field.id}
@@ -1256,9 +1298,19 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
                         {state.role === "controller" ? "Controller" : "Processor"}
                       </div>
                       <div className="mt-2">
-                        <span className="text-xs font-semibold text-slate-600">ผู้ควบคุม/ผู้ประมวลผล: </span>
+                        <span className="text-xs font-semibold text-slate-600">
+                          {state.role === "processor" ? "ชื่อผู้ประมวลผล: " : "ผู้ควบคุมข้อมูลส่วนบุคคล: "}
+                        </span>
                         {state.entityName || "—"}
                       </div>
+                      {state.role === "processor" ? (
+                        <div className="mt-2">
+                          <span className="text-xs font-semibold text-slate-600">
+                            ข้อมูลและที่อยู่ผู้ควบคุมข้อมูลส่วนบุคคล:{" "}
+                          </span>
+                          {state.controllerInfoAddress || "—"}
+                        </div>
+                      ) : null}
                       <div className="mt-2">
                         <span className="text-xs font-semibold text-slate-600">กิจกรรม: </span>
                         {state.activity || "—"}

@@ -5,6 +5,7 @@ import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/
 import { createMockRopa } from "@/lib/data/mock-ropa-store";
 
 type DraftPayload = {
+  ropaRole?: "controller" | "processor";
   processName: string;
   purpose?: string | null;
   personalDataTypes?: string[];
@@ -12,6 +13,7 @@ type DraftPayload = {
   dataType?: "GENERAL" | "SENSITIVE";
   collectionMethod?: string | null;
   dataSource?: string | null;
+  dataControllerAddress?: string | null;
   legalBasis?: string | null;
   crossBorderTransfer?: boolean;
   transferCountry?: string | null;
@@ -40,6 +42,8 @@ export async function POST(request: Request) {
       dataType: body.dataType ?? "GENERAL",
       collectionMethod: body.collectionMethod ?? null,
       dataSource: body.dataSource ?? null,
+      dataControllerAddress: body.dataControllerAddress ?? null,
+      ropaRole: body.ropaRole ?? "controller",
       legalBasis: body.legalBasis ?? null,
       crossBorderTransfer: body.crossBorderTransfer ?? false,
       transferCountry: body.transferCountry ?? null,
@@ -87,6 +91,8 @@ export async function POST(request: Request) {
         dataType: body.dataType ?? "GENERAL",
         collectionMethod: body.collectionMethod ?? null,
         dataSource: body.dataSource ?? null,
+        dataControllerAddress: body.dataControllerAddress ?? null,
+        ropaRole: body.ropaRole ?? "controller",
         legalBasis: body.legalBasis ?? null,
         crossBorderTransfer: body.crossBorderTransfer ?? false,
         transferCountry: body.transferCountry ?? null,
