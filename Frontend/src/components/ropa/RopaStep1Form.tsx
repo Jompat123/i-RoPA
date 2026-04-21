@@ -32,6 +32,7 @@ type Role = "controller" | "processor";
 type DataCategory = "customer" | "employee" | "partner" | "contact";
 type DataType = "general" | "sensitive";
 type CollectionSource = "direct" | "other";
+type CollectionMethod = "soft" | "hard" | null;
 
 type LegalBasis =
   | "consent"
@@ -63,6 +64,7 @@ type RopaWizardState = {
   personalDataTags: string[];
   dataCategory: DataCategory;
   dataType: DataType;
+  collectionMethod: CollectionMethod;
   collectionSource: CollectionSource;
   minorConsentEnabled: boolean;
   minorAgeOption: "under10" | "10to20" | "other" | null;
@@ -180,6 +182,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
     personalDataTags: [...tagSuggestions],
     dataCategory: "customer",
     dataType: "general",
+    collectionMethod: null,
     collectionSource: "direct",
     minorConsentEnabled: false,
     minorAgeOption: null,
@@ -269,6 +272,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
               ? payload.dataCategory
               : prev.dataCategory,
           dataType: String(payload.dataType || "").toUpperCase() === "SENSITIVE" ? "sensitive" : "general",
+          collectionMethod: prev.collectionMethod,
           collectionSource: String(payload.collectionMethod || "").toUpperCase() === "OTHER" ? "other" : "direct",
           entityName: payload.dataSource?.trim() || prev.entityName,
           legalBasis: legalBasis.length ? legalBasis : prev.legalBasis,
@@ -798,6 +802,65 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
                         ) : (
                           <Circle className="h-6 w-6 text-slate-300" aria-hidden />
                         )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section>
+                <h2 className="text-sm font-semibold text-slate-700">
+                  7. วิธีการได้มาซึ่งข้อมูล
+                </h2>
+                <div className="mt-3">
+                  <select
+                    value={state.collectionMethod ?? ""}
+                    onChange={(e) =>
+                      update(
+                        "collectionMethod",
+                        (e.target.value ? (e.target.value as Exclude<CollectionMethod, null>) : null),
+                      )
+                    }
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="">เลือกวิธีการ (เช่น Soft file, Hard copy)</option>
+                    <option value="soft">Soft file</option>
+                    <option value="hard">Hard copy</option>
+                  </select>
+                </div>
+              </section>
+
+              <section>
+                <h2 className="text-sm font-semibold text-slate-700">
+                  8. แหล่งที่ได้มาซึ่งข้อมูล
+                </h2>
+                <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {(
+                    [
+                      { id: "direct", label: "จากเจ้าของข้อมูลโดยตรง", Icon: UserRound },
+                      { id: "other", label: "จากแหล่งอื่น", Icon: UsersRound },
+                    ] as const
+                  ).map(({ id, label, Icon }) => {
+                    const active = state.collectionSource === id;
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => update("collectionSource", id)}
+                        className={`flex items-center justify-center gap-3 rounded-2xl border p-6 text-center transition ${
+                          active
+                            ? "border-blue-700 bg-blue-50 ring-2 ring-blue-100"
+                            : "border-slate-200 bg-white hover:border-slate-300"
+                        }`}
+                      >
+                        <Icon
+                          className={`h-7 w-7 ${active ? "text-blue-700" : "text-slate-400"}`}
+                          strokeWidth={2}
+                          aria-hidden
+                        />
+                        <span className={`text-base font-semibold ${active ? "text-blue-900" : "text-slate-700"}`}>
+                          {label}
+                        </span>
                       </button>
                     );
                   })}
