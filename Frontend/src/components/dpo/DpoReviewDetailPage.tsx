@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
+import { DataSourceBanner } from "@/components/common/DataSourceBanner";
 import type { DpoReviewDetailData } from "@/types/dpo";
 
 type Props = { data: DpoReviewDetailData };
@@ -158,6 +159,7 @@ export function DpoReviewDetailPage({ data }: Props) {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
+      <DataSourceBanner source={data.source} loadError={data.loadError ?? null} />
       <section className="rounded-2xl border border-slate-100 bg-white shadow-sm">
         <div className="border-b border-slate-100 px-5 py-4">
           <h1 className="text-3xl font-semibold text-slate-900">ตรวจสอบและอนุมัติ ROPA (ROPA Review & Approval)</h1>

@@ -204,6 +204,7 @@ async function fetchApiDetail(id: string): Promise<DpoReviewDetailData | null> {
 
     return {
       source: "api",
+      loadError: null,
       id: row.id,
       code: row.referenceCode?.trim() || `ROPA-${new Date().getFullYear()}-${String(row.id).slice(-6)}`,
       processName: asText(row.processName),
@@ -312,6 +313,7 @@ export async function getDpoReviewDetailData(id: string): Promise<DpoReviewDetai
       };
       return {
         source: "mock",
+        loadError: null,
         id: mapped.id,
         code: mock.referenceCode || `ROPA-${new Date().getFullYear()}-${String(mapped.id).slice(-6)}`,
         processName: asText(mapped.processName),
@@ -341,6 +343,10 @@ export async function getDpoReviewDetailData(id: string): Promise<DpoReviewDetai
 
   return {
     source: queue.source,
+    loadError:
+      queue.source === "api"
+        ? "โหลดรายละเอียดจาก API ไม่สำเร็จ — แสดงข้อมูลสรุปเท่าที่มี"
+        : null,
     id: row.id,
     code: row.code,
     processName: row.processName,

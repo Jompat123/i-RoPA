@@ -2,6 +2,9 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
+import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 import { DataSourceBanner } from "@/components/common/DataSourceBanner";
 import {
@@ -12,14 +15,6 @@ import {
 import type { DpoRecordsData } from "@/types/dpo";
 
 type Props = { data: DpoRecordsData };
-
-function escapeHtml(value: string): string {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 export function DpoRecordsPage({ data }: Props) {
   const router = useRouter();
@@ -41,17 +36,21 @@ export function DpoRecordsPage({ data }: Props) {
       })),
     [data.rows],
   );
-
-  function escapeCsv(value: string): string {
-    const v = String(value ?? "");
-    if (v.includes('"') || v.includes(",") || v.includes("\n")) {
-      return `"${v.replace(/"/g, '""')}"`;
-    }
-    return v;
-  }
+  const activeFilters = useMemo(
+    () =>
+      [
+        data.filters.department ? `Department=${data.filters.department}` : null,
+        data.filters.dataType ? `DataType=${data.filters.dataType}` : null,
+        data.filters.legalBasis ? `LegalBasis=${data.filters.legalBasis}` : null,
+      ]
+        .filter(Boolean)
+        .join(", "),
+    [data.filters.department, data.filters.dataType, data.filters.legalBasis],
+  );
 
   function onExportExcel() {
-    const header = [
+    const exportedAt = new Date().toLocaleString("th-TH");
+    const headerRow = [
       "ลำดับ",
       "บทบาท (Controller/Processor)",
       "ชื่อกิจกรรม",
@@ -63,93 +62,107 @@ export function DpoRecordsPage({ data }: Props) {
       "ข้อ 14 การปฏิเสธคำขอใช้สิทธิ",
       "ข้อ 15 มาตรการรักษาความมั่นคงปลอดภัย",
     ];
-    const rows = exportRows.map((row) =>
+    const dataRows = exportRows.map((row) => [
+      row.order,
+      row.roleLabel,
+      row.processName,
+      row.department,
+      row.purpose,
+      row.dataType,
+      row.legalBasis,
+      row.retentionPeriod,
+      row.rights14,
+      row.security15,
+    ]);
+    const tableRows =
+      dataRows.length > 0
+        ? dataRows
+        : [["-", "-", "ไม่มีข้อมูลสำหรับเงื่อนไขที่เลือก", "-", "-", "-", "-", "-", "-", "-"]];
+
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ["ทะเบียนบันทึก ROPA ทั้งองค์กร (DPO)"],
+      [`Exported at ${exportedAt}`],
+      [`Records: ${exportRows.length}`],
+      [`Filters: ${activeFilters || "All"}`],
       [
-        row.order,
-        row.roleLabel,
-        row.processName,
-        row.department,
-        row.purpose,
-        row.dataType,
-        row.legalBasis,
-        row.retentionPeriod,
-        row.rights14,
-        row.security15,
-      ]
-        .map((x) => escapeCsv(String(x)))
-        .join(","),
-    );
-    const csv = [header.join(","), ...rows].join("\n");
-    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `dpo-records-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+        "ข้อ 14-15: แถวผู้ประมวลผล (Processor) แสดงข้อความไม่เกี่ยวข้องตามแบบฟอร์มที่ไม่มีช่องกรอกสำหรับบทบาทนี้",
+      ],
+      [],
+      headerRow,
+      ...tableRows,
+    ]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "DPO Records");
+    XLSX.writeFile(workbook, `dpo-records-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
   function onExportPdf() {
-    const opened = window.open("", "_blank", "noopener,noreferrer,width=1200,height=900");
-    if (!opened) return;
-    const rowsHtml = exportRows
-      .map(
-        (row) => `
-          <tr>
-            <td>${row.order}</td>
-            <td>${escapeHtml(row.roleLabel)}</td>
-            <td>${escapeHtml(row.processName)}</td>
-            <td>${escapeHtml(row.department)}</td>
-            <td>${escapeHtml(row.purpose)}</td>
-            <td>${escapeHtml(row.dataType)}</td>
-            <td>${escapeHtml(row.legalBasis)}</td>
-            <td>${escapeHtml(row.retentionPeriod)}</td>
-            <td>${escapeHtml(row.rights14)}</td>
-            <td>${escapeHtml(row.security15)}</td>
-          </tr>
-        `,
-      )
-      .join("");
-    opened.document.write(`
-      <html>
-        <head>
-          <title>DPO Records Report</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 20px; color: #0f172a; }
-            h1 { margin: 0 0 8px; font-size: 20px; }
-            p { margin: 0 0 14px; color: #334155; font-size: 12px; }
-            table { width: 100%; border-collapse: collapse; font-size: 11px; }
-            th, td { border: 1px solid #cbd5e1; padding: 6px; text-align: left; vertical-align: top; }
-            th { background: #f1f5f9; }
-            @media print { button { display:none; } }
-          </style>
-        </head>
-        <body>
-          <h1>ทะเบียนบันทึก ROPA ทั้งองค์กร (DPO)</h1>
-          <p>Exported at ${new Date().toLocaleString("th-TH")}</p>
-          <p style="font-size:11px;color:#64748b">ข้อ 14–15: แถวผู้ประมวลผล (Processor) แสดงข้อความ &quot;ไม่เกี่ยวข้อง&quot; ตามแบบฟอร์มที่ไม่มีช่องกรอกสำหรับบทบาทนี้</p>
-          <table>
-            <thead>
-              <tr>
-                <th>ลำดับ</th>
-                <th>บทบาท</th>
-                <th>ชื่อกิจกรรม</th>
-                <th>แผนก/เจ้าของข้อมูล</th>
-                <th>วัตถุประสงค์</th>
-                <th>ประเภทข้อมูลส่วนบุคคล</th>
-                <th>ฐานทางกฎหมาย</th>
-                <th>ระยะเวลาจัดเก็บ</th>
-                <th>ข้อ 14</th>
-                <th>ข้อ 15</th>
-              </tr>
-            </thead>
-            <tbody>${rowsHtml}</tbody>
-          </table>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `);
-    opened.document.close();
+    const doc = new jsPDF({
+      orientation: "landscape",
+      unit: "pt",
+      format: "a4",
+    });
+
+    const exportedAt = new Date().toLocaleString("th-TH");
+    doc.setFontSize(14);
+    doc.text("DPO Records", 40, 34);
+    doc.setFontSize(10);
+    doc.text(`Exported at ${exportedAt}`, 40, 52);
+    doc.text(`Records: ${exportRows.length}`, 40, 66);
+    doc.text(`Filters: ${activeFilters || "All"}`, 40, 80);
+    doc.text(
+      "Columns 14-15: Processor rows are marked as not applicable for this form.",
+      40,
+      94,
+    );
+
+    autoTable(doc, {
+      startY: 106,
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 3, overflow: "linebreak" },
+      headStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42] },
+      head: [[
+        "No.",
+        "Role",
+        "Process",
+        "Department/Owner",
+        "Purpose",
+        "Data Type",
+        "Legal Basis",
+        "Retention",
+        "Section 14",
+        "Section 15",
+      ]],
+      body:
+        exportRows.length > 0
+          ? exportRows.map((row) => [
+              row.order,
+              row.roleLabel,
+              row.processName,
+              row.department,
+              row.purpose,
+              row.dataType,
+              row.legalBasis,
+              row.retentionPeriod,
+              row.rights14,
+              row.security15,
+            ])
+          : [["-", "-", "No records for selected filters", "-", "-", "-", "-", "-", "-", "-"]],
+      columnStyles: {
+        0: { cellWidth: 26 },
+        1: { cellWidth: 65 },
+        2: { cellWidth: 95 },
+        3: { cellWidth: 80 },
+        4: { cellWidth: 90 },
+        5: { cellWidth: 75 },
+        6: { cellWidth: 75 },
+        7: { cellWidth: 55 },
+        8: { cellWidth: 95 },
+        9: { cellWidth: 95 },
+      },
+    });
+
+    doc.save(`dpo-records-${new Date().toISOString().slice(0, 10)}.pdf`);
   }
 
   function setFilters(next: Record<string, string>) {

@@ -57,6 +57,7 @@ export type DpoReviewQueueData = {
 
 export type DpoReviewDetailData = {
   source: "api" | "mock";
+  loadError?: string | null;
   id: string;
   code: string;
   processName: string;
