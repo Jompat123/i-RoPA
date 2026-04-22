@@ -11,6 +11,16 @@ const {
 
 const prisma = new PrismaClient();
 
+async function nextReferenceCode() {
+  const year = new Date().getFullYear();
+  const start = new Date(year, 0, 1);
+  const end = new Date(year + 1, 0, 1);
+  const count = await prisma.ropaEntry.count({
+    where: { createdAt: { gte: start, lt: end } }
+  });
+  return `ROPA-${year}-${String(count + 1).padStart(4, '0')}`;
+}
+
 const createAuditLog = async (userId, action, tableName, recordId, oldData, newData) => {
   await prisma.auditLog.create({
     data: {
@@ -48,14 +58,14 @@ const getAll = async (req) => {
 
   return prisma.ropaEntry.findMany({
     where,
-    include: { department: true, createdBy: { select: { id: true, name: true, email: true } } }
+    include: { department: true, createdBy: { select: { id: true, name: true, email: true, role: true } } }
   });
 };
 
 const getOne = async (req, id) => {
   const row = await prisma.ropaEntry.findUnique({
     where: { id },
-    include: { department: true, createdBy: { select: { id: true, name: true, email: true } } }
+    include: { department: true, createdBy: { select: { id: true, name: true, email: true, role: true } } }
   });
   if (!row) return null;
   if (req.user.role === 'DEPARTMENT_USER' && row.createdById !== req.user.id) {
@@ -86,9 +96,15 @@ const mapRopaPayload = (body, { isUpdate = false, role } = {}) => {
     legalBasis: ensureString(body.legalBasis, 'legalBasis', { max: 255 }),
     minorConsentUnder10: ensureBoolean(body.minorConsentUnder10, 'minorConsentUnder10'),
     minorConsent10to20: ensureBoolean(body.minorConsent10to20, 'minorConsent10to20'),
+    minorConsentOtherNote: ensureString(body.minorConsentOtherNote, 'minorConsentOtherNote', { max: 500 }),
     crossBorderTransfer: ensureBoolean(body.crossBorderTransfer, 'crossBorderTransfer'),
     transferCountry: ensureString(body.transferCountry, 'transferCountry', { max: 255 }),
     transferToAffiliate: ensureBoolean(body.transferToAffiliate, 'transferToAffiliate'),
+    transferAffiliateName: ensureString(
+      body.transferAffiliateName,
+      'transferAffiliateName',
+      { max: 500 },
+    ),
     transferMethod: ensureString(body.transferMethod, 'transferMethod', { max: 500 }),
     protectionStandard: ensureString(body.protectionStandard, 'protectionStandard', { max: 500 }),
     legalExemption28: ensureString(body.legalExemption28, 'legalExemption28', { max: 500 }),
@@ -155,9 +171,11 @@ const create = async (req) => {
   const departmentId = req.body?.departmentId || req.user.departmentId;
   if (!departmentId) throw badRequest('departmentId is required');
 
+  const referenceCode = await nextReferenceCode();
   const result = await prisma.ropaEntry.create({
     data: {
       ...mapped,
+      referenceCode,
       createdById: req.user.id,
       departmentId
     }

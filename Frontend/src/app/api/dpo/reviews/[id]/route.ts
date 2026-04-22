@@ -27,7 +27,7 @@ export async function PATCH(request: Request, context: Ctx) {
 
   if (shouldUseMockData()) {
     const updated = updateMockRopa(id, {
-      status: body.action === "approve" ? "COMPLETE" : "NEEDS_FIX",
+      status: body.action === "approve" ? "APPROVED" : "NEEDS_FIX",
       reviewNote: body.globalNote ?? "",
       reviewChecks: body.checks ?? [],
     });
@@ -47,7 +47,7 @@ export async function PATCH(request: Request, context: Ctx) {
 
   // Backend currently exposes status mutation via /api/ropa/:id.
   const backendPayload = sanitizeRopaPayload({
-    status: body.action === "approve" ? "COMPLETE" : "NEEDS_FIX",
+    status: body.action === "approve" ? "APPROVED" : "NEEDS_FIX",
     reviewDecision: body.action,
     reviewNote: body.globalNote ?? "",
     reviewChecks: body.checks ?? [],

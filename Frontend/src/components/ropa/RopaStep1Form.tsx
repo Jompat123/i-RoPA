@@ -53,6 +53,27 @@ type SecurityMeasure =
   | "organizational";
 type RetentionOption = "2y" | "5y" | "10y" | "contract" | "other" | null;
 
+type SecurityEntry = { selected: boolean; detail: string };
+type SecurityMap = Record<SecurityMeasure, SecurityEntry>;
+
+const SECURITY_MEASURE_LIST: { id: SecurityMeasure; label: string; Icon: typeof Shield }[] = [
+  { id: "technical", label: "มาตรการเชิงเทคนิค", Icon: Shield },
+  { id: "physical", label: "มาตรการทางกายภาพ", Icon: Shield },
+  { id: "access_control", label: "การควบคุมการเข้าถึง", Icon: Shield },
+  { id: "audit", label: "มาตรการตรวจสอบย้อนหลัง", Icon: Shield },
+  { id: "organizational", label: "มาตรการเชิงองค์กร", Icon: Shield },
+];
+
+function emptySecurityMap(): SecurityMap {
+  return {
+    technical: { selected: false, detail: "" },
+    physical: { selected: false, detail: "" },
+    access_control: { selected: false, detail: "" },
+    audit: { selected: false, detail: "" },
+    organizational: { selected: false, detail: "" },
+  };
+}
+
 type RopaWizardState = {
   // step 1
   role: Role;
@@ -87,8 +108,7 @@ type RopaWizardState = {
   rightsAccessNote: string;
   deletionMethod: string;
   rightsRefusalNote: string;
-  securityMeasure: SecurityMeasure;
-  securityMeasureNote: string;
+  securityDetails: SecurityMap;
 };
 
 const step1ControllerFields = [
@@ -165,14 +185,48 @@ type ApiRopaDetail = {
   transferToAffiliate?: boolean | null;
   minorConsentUnder10?: boolean | null;
   minorConsent10to20?: boolean | null;
+  minorConsentOtherNote?: string | null;
   securityAccessControl?: string | null;
   securityUserResponsibility?: string | null;
   securityTech?: string | null;
   securityPhysical?: string | null;
   securityOrg?: string | null;
+  securityAudit?: string | null;
+  rightsRefusalNote?: string | null;
+  transferAffiliateName?: string | null;
+  collectionSource?: string | null;
+  collectionMethodType?: string | null;
   status?: string | null;
   reviewNote?: string | null;
 };
+
+function loadSecurityMapFromApi(payload: ApiRopaDetail): SecurityMap {
+  const m = emptySecurityMap();
+  const setIf = (key: SecurityMeasure, text: string | null | undefined) => {
+    const t = (text ?? "").trim();
+    if (t) m[key] = { selected: true, detail: t };
+  };
+  setIf("technical", payload.securityTech);
+  setIf("access_control", payload.securityAccessControl);
+  setIf("audit", payload.securityAudit);
+  const p = (payload.securityPhysical || "").trim();
+  if (p) m.physical = { selected: true, detail: p };
+  const org = (payload.securityOrg || payload.securityUserResponsibility || "").trim();
+  if (org) m.organizational = { selected: true, detail: org };
+  return m;
+}
+
+function buildSecurityApiFields(s: SecurityMap) {
+  const v = (e: SecurityEntry) => (e.selected && e.detail.trim() ? e.detail.trim() : null);
+  return {
+    securityTech: v(s.technical),
+    securityPhysical: v(s.physical),
+    securityAccessControl: v(s.access_control),
+    securityAudit: v(s.audit),
+    securityOrg: v(s.organizational),
+    securityUserResponsibility: v(s.organizational),
+  };
+}
 
 export function RopaStep1Form({ recordId, focusFix = false }: Props) {
   const router = useRouter();
@@ -214,13 +268,37 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
     rightsAccessNote: "",
     deletionMethod: "",
     rightsRefusalNote: "",
-    securityMeasure: "technical",
-    securityMeasureNote: "",
+    securityDetails: emptySecurityMap(),
   });
 
   function update<K extends keyof RopaWizardState>(key: K, value: RopaWizardState[K]) {
     setValidationError(null);
     setState((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function toggleSecurityMeasure(id: SecurityMeasure) {
+    setValidationError(null);
+    setState((prev) => {
+      const cur = prev.securityDetails[id];
+      return {
+        ...prev,
+        securityDetails: {
+          ...prev.securityDetails,
+          [id]: { ...cur, selected: !cur.selected },
+        },
+      };
+    });
+  }
+
+  function setSecurityDetail(id: SecurityMeasure, detail: string) {
+    setValidationError(null);
+    setState((prev) => ({
+      ...prev,
+      securityDetails: {
+        ...prev.securityDetails,
+        [id]: { ...prev.securityDetails[id], detail },
+      },
+    }));
   }
 
   function parseRetentionOption(retentionPeriod: string | null | undefined): {
@@ -281,18 +359,19 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
               .map((x) => x.trim())
               .filter(Boolean);
         const collection = parseCollectionMethod(payload.collectionMethod);
+        const fromApiSource = String(payload.collectionSource || "").toLowerCase();
+        const resolvedSource: CollectionSource =
+          fromApiSource === "other" || fromApiSource === "direct" ? fromApiSource : collection.source;
+        const fromApiMethod = String(payload.collectionMethodType || "").toLowerCase();
+        const resolvedMethod: CollectionMethod =
+          fromApiMethod === "soft" || fromApiMethod === "hard"
+            ? (fromApiMethod as "soft" | "hard")
+            : collection.method;
         const legalBasis = String(payload.legalBasis || "")
           .split(",")
           .map((x) => x.trim().toLowerCase())
           .filter(Boolean) as LegalBasis[];
-        const securityMeasure: SecurityMeasure = payload.securityTech
-          ? "technical"
-          : payload.securityPhysical
-            ? "physical"
-            : payload.securityOrg
-              ? "organizational"
-              : "technical";
-
+        const otherNote = (payload.minorConsentOtherNote || "").trim();
         setState((prev) => ({
           ...prev,
           role:
@@ -311,8 +390,8 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
               ? payload.dataCategory
               : prev.dataCategory,
           dataType: String(payload.dataType || "").toUpperCase() === "SENSITIVE" ? "sensitive" : "general",
-          collectionMethod: collection.method,
-          collectionSource: collection.source,
+          collectionMethod: resolvedMethod,
+          collectionSource: resolvedSource,
           entityName: payload.dataSource?.trim() || prev.entityName,
           legalBasis: legalBasis.length ? legalBasis : prev.legalBasis,
           crossBorderTransfer: Boolean(payload.crossBorderTransfer),
@@ -332,22 +411,22 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
           retentionPeriodOther: retention.customYears,
           deletionMethod: payload.deletionMethod?.trim() || "",
           disclosureNote: payload.disclosureNote?.trim() || prev.disclosureNote,
+          rightsRefusalNote: payload.rightsRefusalNote?.trim() ?? prev.rightsRefusalNote,
           transferToAffiliate: payload.transferToAffiliate ?? prev.transferToAffiliate,
+          affiliateCountry: payload.transferAffiliateName?.trim() || prev.affiliateCountry,
           minorConsentEnabled:
-            Boolean(payload.minorConsentUnder10) || Boolean(payload.minorConsent10to20),
-          minorAgeOption: payload.minorConsentUnder10
-            ? "under10"
-            : payload.minorConsent10to20
-              ? "10to20"
-              : prev.minorAgeOption,
-          securityMeasure,
-          securityMeasureNote:
-            payload.securityAccessControl?.trim() ||
-            payload.securityUserResponsibility?.trim() ||
-            payload.securityTech?.trim() ||
-            payload.securityPhysical?.trim() ||
-            payload.securityOrg?.trim() ||
-            "",
+            Boolean(payload.minorConsentUnder10) ||
+            Boolean(payload.minorConsent10to20) ||
+            Boolean(otherNote),
+          minorAgeOption: otherNote
+            ? "other"
+            : payload.minorConsentUnder10
+              ? "under10"
+              : payload.minorConsent10to20
+                ? "10to20"
+                : prev.minorAgeOption,
+          minorAgeOther: otherNote || prev.minorAgeOther,
+          securityDetails: loadSecurityMapFromApi(payload),
         }));
 
         if (focusFix || String(payload.status || "").toUpperCase() === "NEEDS_FIX") {
@@ -441,8 +520,18 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
       return "กรุณาระบุระยะเวลาการเก็บรักษา (ปี)";
     }
     if (!state.deletionMethod.trim()) return "กรุณากรอกวิธีการลบหรือทำลายข้อมูล";
-    if (!state.securityMeasureNote.trim()) {
-      return "กรุณากรอกมาตรการความปลอดภัยให้ครบ (อย่างน้อย Physical/Organizational)";
+    const sd = state.securityDetails;
+    if (!sd.physical.selected || !sd.physical.detail.trim()) {
+      return "กรุณาเลือกมาตรการเชิงกายภาพและกรอกรายละเอียด (ก่อนส่งตรวจต้องระบุ)";
+    }
+    if (!sd.organizational.selected || !sd.organizational.detail.trim()) {
+      return "กรุณาเลือกมาตรการเชิงองค์กรและกรอกรายละเอียด (ก่อนส่งตรวจต้องระบุ)";
+    }
+    for (const { id, label } of SECURITY_MEASURE_LIST) {
+      const e = sd[id];
+      if (e.selected && !e.detail.trim()) {
+        return `กรุณากรอกรายละเอียดสำหรับ: ${label}`;
+      }
     }
     return null;
   }
@@ -491,39 +580,32 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
           dataCategory: state.dataCategory,
           dataType: state.dataType === "sensitive" ? "SENSITIVE" : "GENERAL",
           collectionMethod: buildCollectionMethodValue(),
+          collectionSource: state.collectionSource,
+          collectionMethodType: state.collectionMethod ?? undefined,
           dataSource: state.entityName || null,
           dataControllerAddress: state.role === "processor" ? state.controllerInfoAddress || null : null,
           legalBasis: state.legalBasis.join(","),
           legalExemption28: state.legalBasisNote || null,
           minorConsentUnder10: state.minorConsentEnabled && state.minorAgeOption === "under10",
           minorConsent10to20: state.minorConsentEnabled && state.minorAgeOption === "10to20",
+          minorConsentOtherNote:
+            state.minorConsentEnabled && state.minorAgeOption === "other"
+              ? state.minorAgeOther.trim() || null
+              : null,
           crossBorderTransfer: state.crossBorderTransfer,
           transferCountry: state.transferCountry || null,
           transferToAffiliate: state.transferToAffiliate,
+          transferAffiliateName: state.affiliateCountry?.trim() || null,
           transferMethod: state.transferMethod || null,
           protectionStandard: state.protectionStandard || null,
-          storageDataType: state.storageType.toUpperCase(),
+          storageDataType: state.storageType,
           rightsAccessNote: state.rightsAccessNote || null,
+          rightsRefusalNote: state.rightsRefusalNote || null,
           retentionPeriod: retentionPeriodLabel() || null,
           storageMethod: state.storageMethod || null,
           deletionMethod: state.deletionMethod || null,
           disclosureNote: state.disclosureNote || null,
-          securityAccessControl:
-            state.securityMeasure === "access_control" ? state.securityMeasureNote || "ACCESS_CONTROL" : null,
-          securityUserResponsibility:
-            state.securityMeasure === "organizational"
-              ? state.securityMeasureNote || "USER_RESPONSIBILITY"
-              : null,
-          securityTech:
-            state.securityMeasure === "technical" ? state.securityMeasureNote || "TECHNICAL" : null,
-          securityPhysical:
-            state.securityMeasure === "physical" || state.securityMeasure === "access_control"
-              ? state.securityMeasureNote || "PHYSICAL_OR_ACCESS"
-              : null,
-          securityOrg:
-            state.securityMeasure === "organizational"
-              ? state.securityMeasureNote || "ORGANIZATIONAL"
-              : null,
+          ...buildSecurityApiFields(state.securityDetails),
           status: "DRAFT",
         }),
       });
@@ -560,34 +642,32 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
       dataCategory: state.dataCategory,
       dataType: state.dataType === "sensitive" ? "SENSITIVE" : "GENERAL",
       collectionMethod: buildCollectionMethodValue(),
+      collectionSource: state.collectionSource,
+      collectionMethodType: state.collectionMethod ?? undefined,
       dataSource: state.entityName || null,
       dataControllerAddress: state.role === "processor" ? state.controllerInfoAddress || null : null,
       legalBasis: state.legalBasis.join(","),
       legalExemption28: state.legalBasisNote || null,
       minorConsentUnder10: state.minorConsentEnabled && state.minorAgeOption === "under10",
       minorConsent10to20: state.minorConsentEnabled && state.minorAgeOption === "10to20",
+      minorConsentOtherNote:
+        state.minorConsentEnabled && state.minorAgeOption === "other"
+          ? state.minorAgeOther.trim() || null
+          : null,
       crossBorderTransfer: state.crossBorderTransfer,
       transferCountry: state.transferCountry || null,
       transferToAffiliate: state.transferToAffiliate,
+      transferAffiliateName: state.affiliateCountry?.trim() || null,
       transferMethod: state.transferMethod || null,
       protectionStandard: state.protectionStandard || null,
-      storageDataType: state.storageType.toUpperCase(),
+      storageDataType: state.storageType,
       retentionPeriod: retentionPeriodLabel() || null,
       storageMethod: state.storageMethod || null,
       rightsAccessNote: state.rightsAccessNote || null,
       deletionMethod: state.deletionMethod || null,
       disclosureNote: state.disclosureNote || null,
-      securityAccessControl:
-        state.securityMeasure === "access_control" ? state.securityMeasureNote || "ACCESS_CONTROL" : null,
-      securityUserResponsibility:
-        state.securityMeasure === "organizational"
-          ? state.securityMeasureNote || "USER_RESPONSIBILITY"
-          : null,
-      securityTech:
-        state.securityMeasure === "technical" ? state.securityMeasureNote || "TECHNICAL" : null,
-      // Keep both fields populated for downstream DPO review/export consistency.
-      securityPhysical: state.securityMeasureNote || null,
-      securityOrg: state.securityMeasureNote || null,
+      rightsRefusalNote: state.rightsRefusalNote || null,
+      ...buildSecurityApiFields(state.securityDetails),
       reviewNote: null,
       reviewChecks: [],
       status: "PENDING",
@@ -1422,22 +1502,18 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
                   <h2 className="text-sm font-semibold text-slate-700">
                     {numberings.security}. มาตรการรักษาความมั่นคงปลอดภัย
                   </h2>
+                  <p className="mt-2 text-xs text-slate-500">
+                    เลือกได้มากกว่า 1 รายการ (กดเพื่อเลือก/ยกเลิก) แต่ละรายการต้องกรอกรายละเอียดด้านล่าง
+                    — มาตรการเชิงกายภาพและเชิงองค์กรจำเป็นต้องระบุก่อนส่ง DPO
+                  </p>
                   <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                    {(
-                      [
-                        { id: "technical", label: "มาตรการเชิงเทคนิค", Icon: Shield },
-                        { id: "physical", label: "มาตรการทางกายภาพ", Icon: Shield },
-                        { id: "access_control", label: "การควบคุมการเข้าถึง", Icon: Shield },
-                        { id: "audit", label: "มาตรการตรวจสอบย้อนหลัง", Icon: Shield },
-                        { id: "organizational", label: "มาตรการเชิงองค์กร", Icon: Shield },
-                      ] as const
-                    ).map(({ id, label, Icon }) => {
-                      const active = state.securityMeasure === id;
+                    {SECURITY_MEASURE_LIST.map(({ id, label, Icon: TileIcon }) => {
+                      const active = state.securityDetails[id].selected;
                       return (
                         <button
                           key={id}
                           type="button"
-                          onClick={() => update("securityMeasure", id)}
+                          onClick={() => toggleSecurityMeasure(id)}
                           className={`relative flex flex-col items-center justify-center gap-3 rounded-2xl border p-4 text-center transition ${
                             active
                               ? "border-slate-900/80 bg-blue-50 ring-2 ring-blue-100"
@@ -1449,7 +1525,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
                               active ? "bg-blue-800 text-white" : "bg-slate-100 text-slate-400"
                             }`}
                           >
-                            <Icon className="h-7 w-7" strokeWidth={2} aria-hidden />
+                            <TileIcon className="h-7 w-7" strokeWidth={2} aria-hidden />
                           </span>
                           <span className="text-xs font-semibold leading-snug text-slate-700">
                             {label}
@@ -1465,13 +1541,23 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
                       );
                     })}
                   </div>
-                  <input
-                    type="text"
-                    value={state.securityMeasureNote}
-                    onChange={(e) => update("securityMeasureNote", e.target.value)}
-                    placeholder="(การกำหนดหน้าที่ความรับผิดชอบของผู้ใช้งาน)"
-                    className="mt-4 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
+                  <div className="mt-4 space-y-4">
+                    {SECURITY_MEASURE_LIST.map(({ id, label }) => {
+                      if (!state.securityDetails[id].selected) return null;
+                      return (
+                        <div key={id} className="flex flex-col gap-2">
+                          <label className="text-xs font-semibold text-slate-600">{label} — รายละเอียด</label>
+                          <textarea
+                            value={state.securityDetails[id].detail}
+                            onChange={(e) => setSecurityDetail(id, e.target.value)}
+                            rows={3}
+                            placeholder="ระบุมาตรการที่นำไปใช้จริงในหน่วยงาน"
+                            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 </section>
               </div>
 
@@ -1610,9 +1696,25 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
                           {state.rightsRefusalNote || "—"}
                         </div>
                       ) : null}
-                      <div className="mt-2">
+                      <div className="mt-2 space-y-1">
                         <span className="text-xs font-semibold text-slate-600">มาตรการความปลอดภัย: </span>
-                        {state.securityMeasure}
+                        {SECURITY_MEASURE_LIST.filter(({ id }) => state.securityDetails[id].selected)
+                          .length ? (
+                          <ul className="list-inside list-disc text-xs text-slate-600">
+                            {SECURITY_MEASURE_LIST.filter(({ id }) => state.securityDetails[id].selected).map(
+                              ({ id, label }) => (
+                                <li key={id}>
+                                  <span className="font-medium text-slate-700">{label}</span>
+                                  {state.securityDetails[id].detail.trim()
+                                    ? ` — ${state.securityDetails[id].detail.trim()}`
+                                    : null}
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                        ) : (
+                          "—"
+                        )}
                       </div>
                     </div>
                   </details>

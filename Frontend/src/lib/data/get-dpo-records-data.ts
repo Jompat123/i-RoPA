@@ -31,6 +31,7 @@ type ApiRopa = {
   crossBorderTransfer?: boolean | null;
   transferCountry?: string | null;
   transferToAffiliate?: boolean | null;
+  transferAffiliateName?: string | null;
   transferMethod?: string | null;
   protectionStandard?: string | null;
   legalExemption28?: string | null;
@@ -125,6 +126,7 @@ function fromMockEntry(row: MockRopaEntry): DpoRecordRow {
     crossBorderTransfer: row.crossBorderTransfer ?? null,
     transferCountry: row.transferCountry ?? null,
     transferToAffiliate: row.transferToAffiliate ?? null,
+    transferAffiliateName: row.transferAffiliateName ?? null,
     transferMethod: row.transferMethod ?? null,
     protectionStandard: row.protectionStandard ?? null,
     legalExemption28: row.legalExemption28 ?? null,
@@ -187,6 +189,7 @@ function fromApiEntry(row: ApiRopa): DpoRecordRow {
     crossBorderTransfer: row.crossBorderTransfer ?? null,
     transferCountry: row.transferCountry ?? null,
     transferToAffiliate: row.transferToAffiliate ?? null,
+    transferAffiliateName: row.transferAffiliateName ?? null,
     transferMethod: row.transferMethod ?? null,
     protectionStandard: row.protectionStandard ?? null,
     legalExemption28: row.legalExemption28 ?? null,

@@ -70,7 +70,13 @@ export function DpoRecordsPage({
         crossBorderCountry:
           row.crossBorderTransfer === true ? (row.transferCountry || "มี (ไม่ระบุประเทศ)") : "ไม่มี",
         transferAffiliate:
-          row.transferToAffiliate === true ? "มี" : row.transferToAffiliate === false ? "ไม่มี" : "",
+          row.transferToAffiliate === true
+            ? (row.transferAffiliateName || "").trim()
+              ? `มี — ${(row.transferAffiliateName || "").trim()}`
+              : "มี"
+            : row.transferToAffiliate === false
+              ? "ไม่มี"
+              : "",
         transferMethod: row.transferMethod || "",
         protectionStandard: row.protectionStandard || "",
         legalExemption28: row.legalExemption28 || "",
@@ -367,9 +373,9 @@ export function DpoRecordsPage({
                 row.purpose,
                 row.dataType,
                 row.legalBasis,
+                row.retentionPeriod,
                 row.crossBorderCountry,
                 row.storageMethod,
-                row.retentionPeriod,
                 row.rights14,
                 row.security15,
               ])

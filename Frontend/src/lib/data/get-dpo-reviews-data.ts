@@ -12,6 +12,7 @@ import { shouldUseMockData } from "./runtime";
 type Query = Record<string, string | string[] | undefined>;
 type ApiRopa = {
   id: string;
+  role?: string | null;
   referenceCode?: string | null;
   processName?: string | null;
   status?: string | null;
@@ -20,21 +21,37 @@ type ApiRopa = {
   createdBy?: { name?: string | null; role?: string | null; roleLabel?: string | null } | null;
   purpose?: string | null;
   legalBasis?: string | null;
+  legalExemption28?: string | null;
   retentionPeriod?: string | null;
   transferCountry?: string | null;
   dataSource?: string | null;
+  dataControllerAddress?: string | null;
   dataCategory?: string | null;
   dataType?: string | null;
   personalDataTypes?: string[] | string | null;
   collectionMethod?: string | null;
+  collectionSource?: string | null;
+  collectionMethodType?: string | null;
   crossBorderTransfer?: boolean | null;
+  transferToAffiliate?: boolean | null;
+  transferAffiliateName?: string | null;
   transferMethod?: string | null;
   protectionStandard?: string | null;
+  storageDataType?: string | null;
   storageMethod?: string | null;
+  rightsAccessNote?: string | null;
+  rightsRefusalNote?: string | null;
+  disclosureNote?: string | null;
+  minorConsentUnder10?: boolean | null;
+  minorConsent10to20?: boolean | null;
+  minorConsentOtherNote?: string | null;
   deletionMethod?: string | null;
   securityTech?: string | null;
   securityPhysical?: string | null;
   securityOrg?: string | null;
+  securityAccessControl?: string | null;
+  securityUserResponsibility?: string | null;
+  securityAudit?: string | null;
 };
 
 function getParam(q: Query, key: string): string {
@@ -81,13 +98,85 @@ function toDataTypeLabel(value: unknown): string {
   return toValue(value);
 }
 
+function ropaEntryRoleLabel(value: unknown): string {
+  const s = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (s === "processor") return "ผู้ประมวลผล (Processor)";
+  if (s === "controller") return "ผู้ควบคุม (Controller)";
+  return s ? s : "-";
+}
+
+function dataCategoryTh(value: unknown): string {
+  const s = String(value ?? "")
+    .trim()
+    .toLowerCase();
+  if (s === "customer") return "ลูกค้า (customer)";
+  if (s === "employee") return "พนักงาน (employee)";
+  if (s === "partner") return "คู่ค้า (partner)";
+  if (s === "contact") return "ผู้ติดต่อ (contact)";
+  return toValue(value);
+}
+
+function collectionMethodParts(row: ApiRopa): { source: string; method: string; raw: string } {
+  const fromApiSource = String(row.collectionSource || "").toLowerCase();
+  const fromApiType = String(row.collectionMethodType || "").toLowerCase();
+  const raw = String(row.collectionMethod || "").trim();
+  const parts = raw
+    .split("|")
+    .map((x) => x.trim())
+    .filter(Boolean);
+  const sourceToken = parts.find((x) => x === "DIRECT" || x === "OTHER");
+  const methodToken = parts.find((x) => x === "SOFT" || x === "HARD");
+
+  let sourceLabel: string;
+  if (fromApiSource === "direct" || (!fromApiSource && (sourceToken === "DIRECT" || !sourceToken)))
+    sourceLabel = "จากเจ้าของข้อมูลส่วนบุคคลโดยตรง";
+  else if (fromApiSource === "other" || sourceToken === "OTHER") sourceLabel = "จากแหล่งอื่น";
+  else sourceLabel = raw ? "ไม่สามารถอ่านแหล่งที่มาได้" : "-";
+
+  let methodLabel: string;
+  if (fromApiType === "soft") methodLabel = "soft file";
+  else if (fromApiType === "hard") methodLabel = "hard copy";
+  else if (methodToken === "SOFT") methodLabel = "soft file";
+  else if (methodToken === "HARD") methodLabel = "hard copy";
+  else methodLabel = "-";
+
+  return { source: sourceLabel, method: methodLabel, raw: raw || "-" };
+}
+
+function minorConsentSummary(row: ApiRopa): string {
+  const a = row.minorConsentUnder10 === true;
+  const b = row.minorConsent10to20 === true;
+  const other = (row.minorConsentOtherNote || "").trim();
+  if (!a && !b && !other) return "ไม่ใช่กรณีขอความยินยอมผู้เยาว์ / ไม่ระบุ";
+  const bits: string[] = [];
+  if (a) bits.push("อายุไม่เกิน 10 ปี");
+  if (b) bits.push("อายุ 10–20 ปี");
+  if (other) bits.push(`อื่น ๆ: ${other}`);
+  return bits.length ? bits.join(" · ") : "-";
+}
+
 function buildStepForms(row: ApiRopa): DpoReviewDetailData["stepForms"] {
+  const isProcessor = String(row.role || "")
+    .trim()
+    .toLowerCase() === "processor";
+  const coll = collectionMethodParts(row);
   return [
     {
       id: "step1",
       label: "ขั้นตอนที่ 1: ข้อมูลกิจกรรม",
       fields: [
-        { label: "ข้อมูลผู้ควบคุม/ผู้ประมวลผล", value: toValue(row.dataSource) },
+        { label: "บทบาท (Controller / Processor)", value: ropaEntryRoleLabel(row.role) },
+        { label: "ชื่อหน่วยงาน/องค์กร (Controller หรือ Processor)", value: toValue(row.dataSource) },
+        ...(isProcessor
+          ? [
+              {
+                label: "ข้อมูลและที่อยู่ของผู้ควบคุมข้อมูลส่วนบุคคล",
+                value: toValue(row.dataControllerAddress),
+              },
+            ]
+          : []),
         { label: "กิจกรรมประมวลผล", value: toValue(row.processName) },
         { label: "วัตถุประสงค์การประมวลผล", value: toValue(row.purpose) },
       ],
@@ -97,32 +186,51 @@ function buildStepForms(row: ApiRopa): DpoReviewDetailData["stepForms"] {
       label: "ขั้นตอนที่ 2: ข้อมูลที่จัดเก็บ",
       fields: [
         { label: "ข้อมูลส่วนบุคคลที่จัดเก็บ", value: toValue(row.personalDataTypes) },
-        { label: "หมวดหมู่ข้อมูล", value: toValue(row.dataCategory) },
+        { label: "หมวดหมู่ข้อมูล", value: dataCategoryTh(row.dataCategory) },
         { label: "ประเภทข้อมูล", value: toDataTypeLabel(row.dataType) },
-        { label: "แหล่งที่มาข้อมูล", value: toValue(row.collectionMethod) },
+        { label: "วิธีการได้มา (soft file / hard copy)", value: coll.method },
+        { label: "แหล่งที่มาข้อมูล", value: coll.source },
+        { label: "ค่า collection ดิบ (อ้างอิง/ตรวจสอบ)", value: coll.raw },
+        { label: "การขอความยินยอมของผู้เยาว์ (Controller)", value: minorConsentSummary(row) },
       ],
     },
     {
       id: "step3",
-      label: "ขั้นตอนที่ 3: ฐานทางกฎหมาย",
+      label: "ขั้นตอนที่ 3: ฐานทางกฎหมายและโอนระหว่างประเทศ",
       fields: [
-        { label: "ฐานทางกฎหมาย", value: toValue(row.legalBasis) },
-        { label: "มีการโอนข้อมูลข้ามประเทศ", value: toValue(row.crossBorderTransfer) },
+        { label: "ฐานทางกฎหมายในการประมวลผล", value: toValue(row.legalBasis) },
+        { label: "ข้อยกเว้น/คำอธิบายอ้างอิง ม.28 (legalExemption28)", value: toValue(row.legalExemption28) },
+        { label: "การใช้หรือเปิดเผยข้อมูล (Disclosure / หมายเหตุ)", value: toValue(row.disclosureNote) },
+        { label: "มีการโอนหรือส่งข้อมูลไปยังต่างประเทศ", value: toValue(row.crossBorderTransfer) },
         { label: "ประเทศปลายทาง", value: toValue(row.transferCountry) },
-        { label: "วิธีการโอนข้อมูล", value: toValue(row.transferMethod) },
-        { label: "มาตรฐานการคุ้มครอง", value: toValue(row.protectionStandard) },
+        { label: "โอนไปยังกลุ่มบริษัทในเครือ", value: toValue(row.transferToAffiliate) },
+        { label: "ชื่อ/รายละเอียดกลุ่มเครือ หรือนิติบุคคลปลายทาง", value: toValue(row.transferAffiliateName) },
+        { label: "วิธีการโอน (Transfer method)", value: toValue(row.transferMethod) },
+        { label: "มาตรฐานการคุ้มครองข้อมูล ณ ปลายทาง", value: toValue(row.protectionStandard) },
       ],
     },
     {
       id: "step4",
-      label: "ขั้นตอนที่ 4: การจัดเก็บ รักษา และทำลาย",
+      label: "ขั้นตอนที่ 4: การจัดเก็บ รักษา สิทธิ และมาตรการรักษาความมั่นคงปลอดภัย",
       fields: [
+        { label: "ประเภทการจัดเก็บ (soft / hard)", value: toValue(row.storageDataType) },
         { label: "วิธีการเก็บรักษา", value: toValue(row.storageMethod) },
         { label: "ระยะเวลาจัดเก็บ", value: toValue(row.retentionPeriod) },
+        { label: "สิทธิการเข้าถึง / เงื่อนไข (rightsAccessNote)", value: toValue(row.rightsAccessNote) },
         { label: "วิธีการลบหรือทำลายข้อมูล", value: toValue(row.deletionMethod) },
-        { label: "มาตรการความปลอดภัย (Technical)", value: toValue(row.securityTech) },
-        { label: "มาตรการความปลอดภัย (Physical)", value: toValue(row.securityPhysical) },
-        { label: "มาตรการความปลอดภัย (Organizational)", value: toValue(row.securityOrg) },
+        {
+          label: "การปฏิเสธคำขอ/คัดค้านสิทธิเจ้าของข้อมูล (Controller — ข้อ 14)",
+          value: isProcessor ? "ไม่เกี่ยวข้อง (Processor)" : toValue(row.rightsRefusalNote),
+        },
+        { label: "มาตรการ (Technical / securityTech)", value: toValue(row.securityTech) },
+        { label: "มาตรการ (Physical / securityPhysical)", value: toValue(row.securityPhysical) },
+        { label: "มาตรการ (Organizational / securityOrg)", value: toValue(row.securityOrg) },
+        { label: "การควบคุมการเข้าถึง (securityAccessControl)", value: toValue(row.securityAccessControl) },
+        {
+          label: "หน้าที่ความรับผิดชอบของผู้ใช้ (securityUserResponsibility)",
+          value: toValue(row.securityUserResponsibility),
+        },
+        { label: "มาตรการตรวจสอบ/audit (securityAudit)", value: toValue(row.securityAudit) },
       ],
     },
   ];
@@ -133,7 +241,11 @@ function normalize(rows: ApiRopa[]): DpoReviewRow[] {
     .filter((row) => {
       const role = String(row.createdBy?.role || row.createdBy?.roleLabel || "").toUpperCase();
       if (!role) return true;
-      return role.includes("DATA_OWNER") || role.includes("DEPARTMENT_USER");
+      return (
+        role.includes("DATA_OWNER") ||
+        role.includes("DEPARTMENT_USER") ||
+        role.includes("ADMIN")
+      );
     })
     .filter((row) => String(row.status || "").toUpperCase() !== "DRAFT")
     .map((row, i) => ({
@@ -286,8 +398,10 @@ export async function getDpoReviewDetailData(id: string): Promise<DpoReviewDetai
   if (shouldUseMockData()) {
     const mock = getMockRopaById(id);
     if (mock) {
+      const mockRole = mock.ropaRole === "processor" ? "processor" : "controller";
       const mapped: ApiRopa = {
         id: mock.id,
+        role: mockRole,
         processName: mock.processName,
         status: mock.status,
         updatedAt: mock.updatedAt,
@@ -295,21 +409,35 @@ export async function getDpoReviewDetailData(id: string): Promise<DpoReviewDetai
         createdBy: mock.createdBy ?? null,
         purpose: mock.purpose ?? null,
         legalBasis: mock.legalBasis ?? null,
+        legalExemption28: mock.legalExemption28 ?? null,
         retentionPeriod: mock.retentionPeriod ?? null,
         transferCountry: mock.transferCountry ?? null,
         dataSource: mock.dataSource ?? null,
+        dataControllerAddress: mock.dataControllerAddress ?? null,
         dataCategory: mock.dataCategory ?? null,
         dataType: mock.dataType ?? null,
         personalDataTypes: mock.personalDataTypes ?? [],
         collectionMethod: mock.collectionMethod ?? null,
         crossBorderTransfer: mock.crossBorderTransfer ?? null,
+        transferToAffiliate: mock.transferToAffiliate ?? null,
+        transferAffiliateName: mock.transferAffiliateName ?? null,
         transferMethod: mock.transferMethod ?? null,
         protectionStandard: mock.protectionStandard ?? null,
+        storageDataType: mock.storageDataType ?? null,
         storageMethod: mock.storageMethod ?? null,
+        rightsAccessNote: mock.rightsAccessNote ?? null,
+        rightsRefusalNote: mock.rightsRefusalNote ?? null,
+        disclosureNote: mock.disclosureNote ?? null,
+        minorConsentUnder10: mock.minorConsentUnder10 ?? null,
+        minorConsent10to20: mock.minorConsent10to20 ?? null,
+        minorConsentOtherNote: mock.minorConsentOtherNote ?? null,
         deletionMethod: mock.deletionMethod ?? null,
         securityTech: mock.securityTech ?? null,
         securityPhysical: mock.securityPhysical ?? null,
         securityOrg: mock.securityOrg ?? null,
+        securityAccessControl: mock.securityAccessControl ?? null,
+        securityUserResponsibility: mock.securityUserResponsibility ?? null,
+        securityAudit: null,
       };
       return {
         source: "mock",

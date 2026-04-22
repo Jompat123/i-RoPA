@@ -200,6 +200,7 @@ const mockRecord = (
   crossBorderTransfer: null,
   transferCountry: null,
   transferToAffiliate: null,
+  transferAffiliateName: null,
   transferMethod: null,
   protectionStandard: null,
   legalExemption28: null,

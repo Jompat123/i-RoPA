@@ -102,6 +102,8 @@ export type DpoRecordRow = {
   crossBorderTransfer: boolean | null;
   transferCountry: string | null;
   transferToAffiliate: boolean | null;
+  /** ชื่อ/รายละเอียดนิติบุคคลปลายทาง หรือกลุ่มเครือ เมื่อโอนข้ามแดน */
+  transferAffiliateName: string | null;
   transferMethod: string | null;
   protectionStandard: string | null;
   legalExemption28: string | null;

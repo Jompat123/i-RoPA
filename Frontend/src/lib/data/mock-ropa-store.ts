@@ -26,8 +26,10 @@ export type MockRopaEntry = {
   protectionStandard?: string | null;
   legalExemption28?: string | null;
   transferToAffiliate?: boolean | null;
+  transferAffiliateName?: string | null;
   minorConsentUnder10?: boolean | null;
   minorConsent10to20?: boolean | null;
+  minorConsentOtherNote?: string | null;
   storageDataType?: string | null;
   rightsAccessNote?: string | null;
   disclosureNote?: string | null;
@@ -234,8 +236,10 @@ export function createMockRopa(payload: Partial<MockRopaEntry>): MockRopaEntry {
     protectionStandard: payload.protectionStandard ?? null,
     legalExemption28: payload.legalExemption28 ?? null,
     transferToAffiliate: payload.transferToAffiliate ?? false,
+    transferAffiliateName: payload.transferAffiliateName ?? null,
     minorConsentUnder10: payload.minorConsentUnder10 ?? false,
     minorConsent10to20: payload.minorConsent10to20 ?? false,
+    minorConsentOtherNote: payload.minorConsentOtherNote ?? null,
     storageDataType: payload.storageDataType ?? null,
     rightsAccessNote: payload.rightsAccessNote ?? null,
     disclosureNote: payload.disclosureNote ?? null,

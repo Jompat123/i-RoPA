@@ -38,6 +38,7 @@ enum Role {
 
 model RopaEntry {
   id               String         @id @default(uuid())
+  referenceCode    String?        @unique
   processName      String
   role             RopaRole       @default(controller)
   purpose          String?
@@ -52,9 +53,11 @@ model RopaEntry {
   legalBasis       String?
   minorConsentUnder10 Boolean?
   minorConsent10to20 Boolean?
+  minorConsentOtherNote String?
   crossBorderTransfer Boolean     @default(false)
   transferCountry  String?
   transferToAffiliate Boolean?
+  transferAffiliateName String?
   transferMethod   String?
   protectionStandard String?
   legalExemption28 String?
