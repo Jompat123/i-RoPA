@@ -23,6 +23,8 @@ const getAll = async (req) => {
 
   if (user.role === 'DEPARTMENT_USER') {
     where.createdById = user.id;
+  } else if (user.role === 'AUDITOR') {
+    where.status = 'COMPLETE';
   } else if (departmentId) {
     where.departmentId = departmentId;
   }
@@ -43,6 +45,9 @@ const getOne = async (req, id) => {
   });
   if (!row) return null;
   if (req.user.role === 'DEPARTMENT_USER' && row.createdById !== req.user.id) {
+    throw new Error('Forbidden');
+  }
+  if (req.user.role === 'AUDITOR' && row.status !== 'COMPLETE') {
     throw new Error('Forbidden');
   }
   return row;

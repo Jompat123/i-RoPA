@@ -1,4 +1,4 @@
-export type AdminUserRole = "ADMIN" | "DPO" | "DATA_OWNER";
+export type AdminUserRole = "ADMIN" | "DPO" | "DATA_OWNER" | "AUDITOR";
 
 export type AdminUserStatus = "active" | "inactive";
 

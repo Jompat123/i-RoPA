@@ -1,7 +1,11 @@
 import { getSessionUser } from "@/lib/auth/get-session-user";
+import { redirect } from "next/navigation";
 
 export default async function SettingsPage() {
   const user = await getSessionUser();
+  if (user?.role === "AUDITOR") {
+    redirect("/dpo/records");
+  }
 
   return (
     <div className="mx-auto max-w-2xl">

@@ -231,6 +231,7 @@ export function LoginForm() {
               <li>admin@i-ropa.local / password123</li>
               <li>dpo@i-ropa.local / password123</li>
               <li>owner@i-ropa.local / password123</li>
+              <li>auditor@i-ropa.local / password123</li>
             </ul>
           </details>
         </div>

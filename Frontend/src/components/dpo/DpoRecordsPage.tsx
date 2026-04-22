@@ -15,7 +15,11 @@ import type { DpoRecordsData } from "@/types/dpo";
 
 type Props = { data: DpoRecordsData };
 
-export function DpoRecordsPage({ data }: Props) {
+export function DpoRecordsPage({
+  data,
+  canExport = true,
+  exportLocked = false,
+}: Props & { canExport?: boolean; exportLocked?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -262,6 +266,24 @@ export function DpoRecordsPage({ data }: Props) {
       worksheet.getRow(9).height = 52;
       worksheet.getRow(10).height = 8;
 
+      if (exportLocked) {
+        await worksheet.protect("iropa-readonly", {
+          selectLockedCells: true,
+          selectUnlockedCells: true,
+          formatCells: false,
+          formatColumns: false,
+          formatRows: false,
+          insertColumns: false,
+          insertRows: false,
+          insertHyperlinks: false,
+          deleteColumns: false,
+          deleteRows: false,
+          sort: false,
+          autoFilter: false,
+          pivotTables: false,
+        });
+      }
+
       const buffer = await workbook.xlsx.writeBuffer();
       const blob = new Blob([buffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -361,22 +383,28 @@ export function DpoRecordsPage({ data }: Props) {
       <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <h1 className="text-3xl font-semibold text-slate-800">ทะเบียนบันทึก ROPA ทั้งองค์กร</h1>
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={onExportPdf}
-              className="rounded-xl bg-rose-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-rose-400"
-            >
-              Export PDF (รายงานทางการ)
-            </button>
-            <button
-              type="button"
-              onClick={onExportExcel}
-              className="rounded-xl bg-emerald-200 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-emerald-300"
-            >
-              Export Excel (เพื่อตรวจสอบ)
-            </button>
-          </div>
+          {canExport ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={onExportPdf}
+                className="rounded-xl bg-rose-300 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-rose-400"
+              >
+                Export PDF (รายงานทางการ)
+              </button>
+              <button
+                type="button"
+                onClick={onExportExcel}
+                className="rounded-xl bg-emerald-200 px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-emerald-300"
+              >
+                Export Excel (เพื่อตรวจสอบ)
+              </button>
+            </div>
+          ) : (
+            <span className="rounded-xl bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-500">
+              Auditor: สิทธิ์ดูข้อมูลอย่างเดียว
+            </span>
+          )}
         </div>
         <p className="mt-3 text-xs leading-relaxed text-slate-500">
           คอลัมน์ข้อ 14–15: รายการที่เป็น <span className="font-semibold">ผู้ประมวลผล (Processor)</span>{" "}

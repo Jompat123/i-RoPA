@@ -71,7 +71,14 @@ async function fetchDashboardFromApi(): Promise<AdminDashboardData | null> {
       latestUsers: users.slice(0, 5).map((u) => ({
         id: u.id,
         name: u.name,
-        role: u.role === "ADMIN" ? "ADMIN" : u.role === "VIEWER" ? "DPO" : "DATA_OWNER",
+        role:
+          u.role === "ADMIN"
+            ? "ADMIN"
+            : u.role === "AUDITOR"
+              ? "AUDITOR"
+              : u.role === "VIEWER"
+                ? "DPO"
+                : "DATA_OWNER",
         department: u.department?.name || "Unknown",
         status: "active",
       })),

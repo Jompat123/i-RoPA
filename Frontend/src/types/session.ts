@@ -1,4 +1,4 @@
-export type AppRole = "ADMIN" | "DATA_OWNER" | "DPO";
+export type AppRole = "ADMIN" | "DATA_OWNER" | "DPO" | "AUDITOR";
 
 /**
  * ข้อมูลผู้ใช้สำหรับแสดงใน Topbar หลังล็อกอินสำเร็จ

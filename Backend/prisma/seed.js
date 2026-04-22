@@ -75,6 +75,23 @@ async function main() {
     }
   });
 
+  await prisma.user.upsert({
+    where: { email: 'auditor@i-ropa.local' },
+    update: {
+      name: 'ผู้ตรวจสอบระบบ',
+      role: 'AUDITOR',
+      departmentId: hrDept.id,
+      passwordHash
+    },
+    create: {
+      name: 'ผู้ตรวจสอบระบบ',
+      email: 'auditor@i-ropa.local',
+      passwordHash,
+      role: 'AUDITOR',
+      departmentId: hrDept.id
+    }
+  });
+
   console.log('Seed data upserted successfully');
 }
 

@@ -39,8 +39,13 @@ const dpoNav: NavItem[] = [
   { href: "/settings", label: "ตั้งค่า", Icon: Activity },
 ];
 
+const auditorNav: NavItem[] = [
+  { href: "/dpo/records", label: "บันทึกรายการกิจกรรม", Icon: ListChecks },
+];
+
 export function getDashboardNav(role?: AppRole): NavItem[] {
   if (role === "ADMIN") return adminNav;
   if (role === "DPO") return dpoNav;
+  if (role === "AUDITOR") return auditorNav;
   return dataOwnerNav;
 }
