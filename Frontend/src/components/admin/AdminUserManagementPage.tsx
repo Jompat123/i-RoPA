@@ -8,10 +8,11 @@ import type { AdminUserManagementData, AdminUserRole, AdminUserRow } from "@/typ
 
 type Props = { data: AdminUserManagementData };
 
-type RoleApi = "ADMIN" | "VIEWER" | "DEPARTMENT_USER";
+type RoleApi = "ADMIN" | "VIEWER" | "DEPARTMENT_USER" | "AUDITOR";
 
 function toApiRole(role: AdminUserRole): RoleApi {
   if (role === "ADMIN") return "ADMIN";
+  if (role === "AUDITOR") return "AUDITOR";
   if (role === "DPO") return "VIEWER";
   return "DEPARTMENT_USER";
 }
@@ -76,8 +77,8 @@ export function AdminUserManagementPage({ data }: Props) {
 
   async function handleCreateUser() {
     if (!form.name.trim() || !form.email.trim() || !form.password.trim()) return;
-    if ((form.role === "DATA_OWNER" || form.role === "DPO") && !form.departmentId) {
-      window.alert("กรุณาเลือกแผนกสำหรับ Data Owner หรือ DPO");
+    if ((form.role === "DATA_OWNER" || form.role === "DPO" || form.role === "AUDITOR") && !form.departmentId) {
+      window.alert("กรุณาเลือกแผนกสำหรับ Data Owner, DPO หรือ Auditor");
       return;
     }
     const res = await fetch("/api/admin/users", {
@@ -157,6 +158,7 @@ export function AdminUserManagementPage({ data }: Props) {
           >
             <option value="DATA_OWNER">Data Owner</option>
             <option value="DPO">DPO</option>
+            <option value="AUDITOR">Auditor</option>
             <option value="ADMIN">Admin</option>
           </select>
           <select
@@ -200,6 +202,7 @@ export function AdminUserManagementPage({ data }: Props) {
             <option value="all">Role</option>
             <option value="ADMIN">Admin</option>
             <option value="DPO">DPO</option>
+            <option value="AUDITOR">Auditor</option>
             <option value="DATA_OWNER">Data Owner</option>
           </select>
           <select
@@ -241,6 +244,7 @@ export function AdminUserManagementPage({ data }: Props) {
                     >
                       <option value="ADMIN">Admin</option>
                       <option value="DPO">DPO</option>
+                      <option value="AUDITOR">Auditor</option>
                       <option value="DATA_OWNER">Data Owner</option>
                     </select>
                   </td>

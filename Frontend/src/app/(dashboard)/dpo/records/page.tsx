@@ -10,11 +10,11 @@ type Props = {
 
 export default async function DpoRecordsRoute({ searchParams }: Props) {
   const user = await getSessionUser();
-  if (user?.role !== "DPO") {
+  if (user?.role !== "DPO" && user?.role !== "AUDITOR") {
     redirect("/");
   }
 
   const params = (await searchParams) ?? {};
   const data = await getDpoRecordsData(params);
-  return <DpoRecordsPage data={data} />;
+  return <DpoRecordsPage data={data} canExport exportLocked={user.role === "AUDITOR"} />;
 }

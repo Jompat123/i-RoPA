@@ -8,7 +8,7 @@ type CreateUserPayload = {
   name: string;
   email: string;
   password: string;
-  role: "ADMIN" | "VIEWER" | "DEPARTMENT_USER";
+  role: "ADMIN" | "VIEWER" | "DEPARTMENT_USER" | "AUDITOR";
   departmentId?: string | null;
 };
 
@@ -45,8 +45,14 @@ export async function POST(request: Request) {
   if (!body.name?.trim() || !body.email?.trim() || !body.password?.trim()) {
     return NextResponse.json({ error: "name, email, password are required" }, { status: 400 });
   }
-  if ((body.role === "DEPARTMENT_USER" || body.role === "VIEWER") && !body.departmentId) {
-    return NextResponse.json({ error: "departmentId is required for DPO/Data Owner" }, { status: 400 });
+  if (
+    (body.role === "DEPARTMENT_USER" || body.role === "VIEWER" || body.role === "AUDITOR") &&
+    !body.departmentId
+  ) {
+    return NextResponse.json(
+      { error: "departmentId is required for DPO/Data Owner/Auditor" },
+      { status: 400 },
+    );
   }
 
   if (shouldUseMockData()) {

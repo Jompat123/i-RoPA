@@ -33,6 +33,7 @@ enum Role {
   ADMIN
   DEPARTMENT_USER
   VIEWER
+  AUDITOR
 }
 
 model RopaEntry {

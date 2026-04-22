@@ -7,7 +7,7 @@ import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/
 type UpdateUserPayload = {
   name?: string;
   email?: string;
-  role?: "ADMIN" | "VIEWER" | "DEPARTMENT_USER";
+  role?: "ADMIN" | "VIEWER" | "DEPARTMENT_USER" | "AUDITOR";
   departmentId?: string | null;
   password?: string;
 };

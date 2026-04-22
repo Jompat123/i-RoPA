@@ -8,7 +8,7 @@ import { getMockRopaById, updateMockRopa } from "@/lib/data/mock-ropa-store";
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, context: Ctx) {
-  const denied = await requireApiRole(["DATA_OWNER", "DPO", "ADMIN"]);
+  const denied = await requireApiRole(["DATA_OWNER", "DPO", "AUDITOR", "ADMIN"]);
   if (denied) return denied;
 
   const { id } = await context.params;

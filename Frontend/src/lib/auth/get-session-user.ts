@@ -30,12 +30,16 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     const normalizedRole: AppRole =
       rawRole === "ADMIN"
         ? "ADMIN"
+        : rawRole === "AUDITOR"
+          ? "AUDITOR"
         : rawRole === "DPO" || rawRole === "VIEWER"
           ? "DPO"
           : rawRole === "DATA_OWNER" || rawRole === "DEPARTMENT_USER"
             ? "DATA_OWNER"
             : upperRoleLabel.includes("ADMIN")
               ? "ADMIN"
+          : upperRoleLabel.includes("AUDITOR")
+            ? "AUDITOR"
               : upperRoleLabel.includes("DPO")
                 ? "DPO"
                 : "DATA_OWNER";

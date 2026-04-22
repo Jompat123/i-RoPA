@@ -46,6 +46,13 @@ const MOCK_ACCOUNTS: Record<string, MockAccount> = {
     roleLabel: "Data Owner",
     role: "DATA_OWNER",
   },
+  "auditor@i-ropa.local": {
+    id: "mock-auditor",
+    password: "password123",
+    name: "ผู้ตรวจสอบระบบ",
+    roleLabel: "Auditor",
+    role: "AUDITOR",
+  },
 };
 
 function safeEmail(value: string): string {
@@ -114,12 +121,16 @@ export async function POST(request: Request) {
           ? rawUser.roleLabel
           : roleRaw === "ADMIN"
             ? "Admin"
+            : roleRaw === "AUDITOR"
+              ? "Auditor"
             : roleRaw === "DPO" || roleRaw === "VIEWER"
               ? "DPO"
               : "Data Owner";
       const role: AppRole =
         roleRaw === "ADMIN"
           ? "ADMIN"
+          : roleRaw === "AUDITOR"
+            ? "AUDITOR"
           : roleRaw === "DPO" || roleRaw === "VIEWER"
             ? "DPO"
             : "DATA_OWNER";

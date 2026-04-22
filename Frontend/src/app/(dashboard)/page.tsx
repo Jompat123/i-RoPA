@@ -12,6 +12,9 @@ export default async function HomePage() {
   if (user?.role === "DPO") {
     redirect("/dpo");
   }
+  if (user?.role === "AUDITOR") {
+    redirect("/dpo/records");
+  }
   const data = await getDashboardPageData();
   return <DashboardHome data={data} />;
 }

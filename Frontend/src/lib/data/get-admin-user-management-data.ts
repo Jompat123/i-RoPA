@@ -24,6 +24,7 @@ function getParam(q: Query, key: string): string {
 
 function toRole(role: string): AdminUserRole {
   if (role === "ADMIN") return "ADMIN";
+  if (role === "AUDITOR") return "AUDITOR";
   if (role === "VIEWER" || role === "DPO") return "DPO";
   return "DATA_OWNER";
 }
