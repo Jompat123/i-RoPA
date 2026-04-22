@@ -4,63 +4,78 @@ const bcrypt = require('bcrypt');
 const prisma = new PrismaClient();
 
 async function main() {
-  // Create departments
-  const itDept = await prisma.department.create({
-    data: {
-      name: 'IT Department',
-      description: 'Information Technology'
-    }
-  });
+  // หาหรือสร้าง departments
+  let itDept = await prisma.department.findFirst({ where: { name: 'IT Department' } });
+  if (!itDept) {
+    itDept = await prisma.department.create({
+      data: {
+        name: 'IT Department',
+        description: 'Information Technology'
+      }
+    });
+  }
 
-  const hrDept = await prisma.department.create({
-    data: {
-      name: 'HR Department',
-      description: 'Human Resources'
-    }
-  });
+  let hrDept = await prisma.department.findFirst({ where: { name: 'HR Department' } });
+  if (!hrDept) {
+    hrDept = await prisma.department.create({
+      data: {
+        name: 'HR Department',
+        description: 'Human Resources'
+      }
+    });
+  }
 
-  // Create users
+  // หาหรือสร้าง users (อัปเดตถ้ามีอยู่แล้ว)
   const passwordHash = await bcrypt.hash('password123', 10);
 
-  await prisma.user.create({
-    data: {
-      name: 'Admin User',
-      email: 'admin@test.com',
+  await prisma.user.upsert({
+    where: { email: 'admin@i-ropa.local' },
+    update: {
+      name: 'ผู้ดูแลระบบ',
+      role: 'ADMIN',
+      passwordHash
+    },
+    create: {
+      name: 'ผู้ดูแลระบบ',
+      email: 'admin@i-ropa.local',
       passwordHash,
       role: 'ADMIN'
     }
   });
 
-  await prisma.user.create({
-    data: {
-      name: 'IT Staff',
-      email: 'it@test.com',
+  await prisma.user.upsert({
+    where: { email: 'dpo@i-ropa.local' },
+    update: {
+      name: 'เจ้าหน้าที่ DPO',
+      role: 'VIEWER',
+      passwordHash
+    },
+    create: {
+      name: 'เจ้าหน้าที่ DPO',
+      email: 'dpo@i-ropa.local',
+      passwordHash,
+      role: 'VIEWER'
+    }
+  });
+
+  await prisma.user.upsert({
+    where: { email: 'owner@i-ropa.local' },
+    update: {
+      name: 'เจ้าของข้อมูล',
+      role: 'DEPARTMENT_USER',
+      departmentId: itDept.id,
+      passwordHash
+    },
+    create: {
+      name: 'เจ้าของข้อมูล',
+      email: 'owner@i-ropa.local',
       passwordHash,
       role: 'DEPARTMENT_USER',
       departmentId: itDept.id
     }
   });
 
-  await prisma.user.create({
-    data: {
-      name: 'HR Staff',
-      email: 'hr@test.com',
-      passwordHash,
-      role: 'DEPARTMENT_USER',
-      departmentId: hrDept.id
-    }
-  });
-
-  await prisma.user.create({
-    data: {
-      name: 'Viewer User',
-      email: 'viewer@test.com',
-      passwordHash,
-      role: 'VIEWER'
-    }
-  });
-
-  console.log('Seed data created successfully');
+  console.log('Seed data upserted successfully');
 }
 
 main()

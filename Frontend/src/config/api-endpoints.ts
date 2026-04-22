@@ -27,7 +27,7 @@ export function apiPathUserItem(id: string): string {
 
 /** Data Owner — การ์ดสรุปหน้าแรก */
 export function apiPathDataOwnerDashboardSummary(): string {
-  return envPath("NEXT_PUBLIC_API_DATA_OWNER_DASHBOARD_SUMMARY_PATH", "/dashboard/summary");
+  return envPath("NEXT_PUBLIC_API_DATA_OWNER_DASHBOARD_SUMMARY_PATH", "/api/dashboard/summary");
 }
 
 /** Admin — สรุปแดชบอร์ด */
