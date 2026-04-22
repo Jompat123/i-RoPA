@@ -225,6 +225,29 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
     return { option: years ? "other" : null, customYears: years };
   }
 
+  function parseCollectionMethod(raw: string | null | undefined): {
+    source: CollectionSource;
+    method: CollectionMethod;
+  } {
+    const value = String(raw || "").trim().toUpperCase();
+    if (!value) return { source: "direct", method: null };
+
+    const parts = value.split("|").map((x) => x.trim()).filter(Boolean);
+    const sourcePart = parts.find((x) => x === "DIRECT" || x === "OTHER") || value;
+    const methodPart = parts.find((x) => x === "SOFT" || x === "HARD") || value;
+
+    return {
+      source: sourcePart === "OTHER" ? "other" : "direct",
+      method: methodPart === "SOFT" || methodPart === "HARD" ? methodPart.toLowerCase() as CollectionMethod : null,
+    };
+  }
+
+  function buildCollectionMethodValue(): string {
+    const source = state.collectionSource === "other" ? "OTHER" : "DIRECT";
+    const method = state.collectionMethod ? state.collectionMethod.toUpperCase() : "";
+    return method ? `${source}|${method}` : source;
+  }
+
   useEffect(() => {
     if (!recordId) return;
     let cancelled = false;
@@ -245,6 +268,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
               .split(",")
               .map((x) => x.trim())
               .filter(Boolean);
+        const collection = parseCollectionMethod(payload.collectionMethod);
         const legalBasis = String(payload.legalBasis || "")
           .split(",")
           .map((x) => x.trim().toLowerCase())
@@ -272,8 +296,8 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
               ? payload.dataCategory
               : prev.dataCategory,
           dataType: String(payload.dataType || "").toUpperCase() === "SENSITIVE" ? "sensitive" : "general",
-          collectionMethod: prev.collectionMethod,
-          collectionSource: String(payload.collectionMethod || "").toUpperCase() === "OTHER" ? "other" : "direct",
+          collectionMethod: collection.method,
+          collectionSource: collection.source,
           entityName: payload.dataSource?.trim() || prev.entityName,
           legalBasis: legalBasis.length ? legalBasis : prev.legalBasis,
           crossBorderTransfer: Boolean(payload.crossBorderTransfer),
@@ -429,7 +453,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
           personalDataTypes: state.personalDataTags,
           dataCategory: state.dataCategory,
           dataType: state.dataType === "sensitive" ? "SENSITIVE" : "GENERAL",
-          collectionMethod: state.collectionSource === "direct" ? "DIRECT" : "OTHER",
+          collectionMethod: buildCollectionMethodValue(),
           dataSource: state.entityName || null,
           dataControllerAddress: state.role === "processor" ? state.controllerInfoAddress || null : null,
           legalBasis: state.legalBasis.join(","),
@@ -483,7 +507,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
       personalDataTypes: state.personalDataTags,
       dataCategory: state.dataCategory,
       dataType: state.dataType === "sensitive" ? "SENSITIVE" : "GENERAL",
-      collectionMethod: state.collectionSource === "direct" ? "DIRECT" : "OTHER",
+      collectionMethod: buildCollectionMethodValue(),
       dataSource: state.entityName || null,
       dataControllerAddress: state.role === "processor" ? state.controllerInfoAddress || null : null,
       legalBasis: state.legalBasis.join(","),
