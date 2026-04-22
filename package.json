@@ -10,11 +10,8 @@
     "db:setup": "npm run db:up && npm --prefix Backend run db:reset",
     "build": "npm run build --prefix Frontend",
     "lint": "npm run lint --prefix Frontend",
-    "start": "npm run start --prefix Frontend"
-  },
-  "dependencies": {
-    "jspdf": "^4.2.1",
-    "jspdf-autotable": "^5.0.7",
-    "xlsx": "^0.18.5"
+    "start": "npm run start --prefix Frontend",
+    "test:frontend": "npm run test:run --prefix Frontend",
+    "test:backend": "npm run test:run --prefix Backend"
   }
 }

@@ -1,5 +1,11 @@
 # i-RoPA
 
+## ไฟล์ `package.json` ที่ root
+
+- **ไม่จำเป็นต้อง** `npm install` ที่ root สำหรับ dev ปกติ — ติดตั้งเฉพาะ **Backend** กับ **Frontend** ตามขั้นตอนด้านล่าง
+- สคริปต์ที่ root (เช่น `npm run db:up`, `npm run dev`) เป็นแค่ **shortcut** ไป `Frontend` / `docker compose` — dependencies หลักอยู่ในแต่ละโปรเจกต์ย่อย
+- รันเทสฝั่ง backend ต้องมี PostgreSQL ตาม `Backend/.env` แล้ว (เช่น `docker compose up` + `npm --prefix Backend run db:reset`) ก่อน: `npm run test:backend`
+
 ## รันบนเครื่องใหม่ (แนะนำ)
 
 ### 0) สิ่งที่ต้องมี
