@@ -8,6 +8,7 @@ import {
 } from "@/lib/auth/session-cookies";
 import type { AppRole } from "@/types/session";
 import { apiPathAuthLogin } from "@/config/api-endpoints";
+import { extractErrorMessage, toAppRole } from "@/lib/contracts/backend-contract";
 import { getApiBaseUrl, shouldUseMockData } from "@/lib/data/runtime";
 
 type LoginBody = {
@@ -92,12 +93,7 @@ export async function POST(request: Request) {
       const payload = (await res.json().catch(() => ({}))) as Record<string, unknown>;
 
       if (!res.ok) {
-        const msg =
-          typeof payload.error === "string"
-            ? payload.error
-            : typeof payload.message === "string"
-              ? payload.message
-              : "เข้าสู่ระบบไม่สำเร็จ";
+        const msg = extractErrorMessage(payload, "เข้าสู่ระบบไม่สำเร็จ");
         return NextResponse.json({ error: msg }, { status: res.status });
       }
 
@@ -126,14 +122,7 @@ export async function POST(request: Request) {
             : roleRaw === "DPO" || roleRaw === "VIEWER"
               ? "DPO"
               : "Data Owner";
-      const role: AppRole =
-        roleRaw === "ADMIN"
-          ? "ADMIN"
-          : roleRaw === "AUDITOR"
-            ? "AUDITOR"
-          : roleRaw === "DPO" || roleRaw === "VIEWER"
-            ? "DPO"
-            : "DATA_OWNER";
+      const role: AppRole = toAppRole(roleRaw);
 
       const out = NextResponse.json({ ok: true });
       applySessionCookies(out, token, {

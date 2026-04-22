@@ -1,5 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcrypt');
+const { badRequest, notFound } = require('../lib/http-error');
+const { USER_ROLES, ensureString, ensureEnum } = require('../lib/validation');
 
 const prisma = new PrismaClient();
 
@@ -31,7 +33,15 @@ const getOne = async (id) => {
 };
 
 const create = async (req) => {
-  const { name, email, password, role, departmentId } = req.body;
+  const name = ensureString(req.body?.name, 'name', { required: true, max: 120 });
+  const email = ensureString(req.body?.email, 'email', { required: true, max: 255 });
+  const password = ensureString(req.body?.password, 'password', { required: true, max: 200 });
+  const role = ensureEnum(req.body?.role, 'role', USER_ROLES, { required: true });
+  const departmentId = req.body?.departmentId || null;
+
+  if (['DEPARTMENT_USER', 'VIEWER', 'AUDITOR'].includes(role) && !departmentId) {
+    throw badRequest('departmentId is required for non-admin roles');
+  }
 
   const passwordHash = await bcrypt.hash(password, 10);
 
@@ -49,11 +59,16 @@ const create = async (req) => {
 
 const update = async (req, id) => {
   const oldData = await prisma.user.findUnique({ where: { id } });
+  if (!oldData) throw notFound('User not found');
 
-  const { name, email, role, departmentId, password } = req.body;
-  const data = { name, email, role, departmentId };
+  const data = {};
+  if (req.body?.name !== undefined) data.name = ensureString(req.body.name, 'name', { required: true, max: 120 });
+  if (req.body?.email !== undefined) data.email = ensureString(req.body.email, 'email', { required: true, max: 255 });
+  if (req.body?.role !== undefined) data.role = ensureEnum(req.body.role, 'role', USER_ROLES, { required: true });
+  if (req.body?.departmentId !== undefined) data.departmentId = req.body.departmentId || null;
 
-  if (password) {
+  if (req.body?.password !== undefined) {
+    const password = ensureString(req.body.password, 'password', { required: true, max: 200 });
     data.passwordHash = await bcrypt.hash(password, 10);
   }
 
@@ -68,6 +83,7 @@ const update = async (req, id) => {
 
 const remove = async (req, id) => {
   const oldData = await prisma.user.findUnique({ where: { id } });
+  if (!oldData) throw notFound('User not found');
   await prisma.user.delete({ where: { id } });
 
   await prisma.auditLog.create({

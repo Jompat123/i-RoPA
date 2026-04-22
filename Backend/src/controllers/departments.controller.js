@@ -1,4 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
+const { ensureString } = require('../lib/validation');
+const { notFound } = require('../lib/http-error');
 
 const prisma = new PrismaClient();
 
@@ -20,7 +22,8 @@ const getOne = async (id) => {
 };
 
 const create = async (req) => {
-  const { name, description } = req.body;
+  const name = ensureString(req.body?.name, 'name', { required: true, max: 120 });
+  const description = ensureString(req.body?.description, 'description', { max: 500 });
   const result = await prisma.department.create({ data: { name, description } });
 
   await prisma.auditLog.create({
@@ -32,7 +35,11 @@ const create = async (req) => {
 
 const update = async (req, id) => {
   const oldData = await prisma.department.findUnique({ where: { id } });
-  const { name, description } = req.body;
+  if (!oldData) throw notFound('Department not found');
+  const name = req.body?.name !== undefined ? ensureString(req.body.name, 'name', { required: true, max: 120 }) : undefined;
+  const description = req.body?.description !== undefined
+    ? ensureString(req.body.description, 'description', { max: 500 })
+    : undefined;
   const result = await prisma.department.update({ where: { id }, data: { name, description } });
 
   await prisma.auditLog.create({
@@ -44,6 +51,7 @@ const update = async (req, id) => {
 
 const remove = async (req, id) => {
   const oldData = await prisma.department.findUnique({ where: { id } });
+  if (!oldData) throw notFound('Department not found');
   await prisma.department.delete({ where: { id } });
 
   await prisma.auditLog.create({

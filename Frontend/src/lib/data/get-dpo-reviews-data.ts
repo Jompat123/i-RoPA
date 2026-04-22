@@ -337,53 +337,5 @@ export async function getDpoReviewDetailData(id: string): Promise<DpoReviewDetai
     if (api) return api;
   }
 
-  const queue = await getDpoReviewsData({});
-  const row = queue.rows.find((r) => r.id === id);
-  if (!row) return null;
-
-  return {
-    source: queue.source,
-    loadError:
-      queue.source === "api"
-        ? "โหลดรายละเอียดจาก API ไม่สำเร็จ — แสดงข้อมูลสรุปเท่าที่มี"
-        : null,
-    id: row.id,
-    code: row.code,
-    processName: row.processName,
-    department: row.department,
-    ownerName: row.ownerName,
-    status: row.status,
-    submittedAtLabel: row.submittedAtLabel,
-    summary: {
-      purpose: "รอข้อมูลจริงจาก backend field purpose",
-      legalBasis: "รอข้อมูลจริงจาก backend field legalBasis",
-      retentionPeriod: "รอข้อมูลจริงจาก backend field retentionPeriod",
-      transferCountry: "รอข้อมูลจริงจาก backend field transferCountry",
-    },
-    stepForms: [
-      {
-        id: "step1" as const,
-        label: "ขั้นตอนที่ 1: ข้อมูลกิจกรรม",
-        fields: [
-          { label: "กิจกรรมประมวลผล", value: row.processName },
-          { label: "ผู้ส่งคำขอ", value: row.ownerName },
-        ],
-      },
-      {
-        id: "step2" as const,
-        label: "ขั้นตอนที่ 2: ข้อมูลที่จัดเก็บ",
-        fields: [{ label: "ข้อมูลส่วนบุคคลที่จัดเก็บ", value: "รอข้อมูลจริงจาก backend" }],
-      },
-      {
-        id: "step3" as const,
-        label: "ขั้นตอนที่ 3: ฐานทางกฎหมาย",
-        fields: [{ label: "ฐานทางกฎหมาย", value: "รอข้อมูลจริงจาก backend" }],
-      },
-      {
-        id: "step4" as const,
-        label: "ขั้นตอนที่ 4: การจัดเก็บ รักษา และทำลาย",
-        fields: [{ label: "วิธีการเก็บรักษา", value: "รอข้อมูลจริงจาก backend" }],
-      },
-    ],
-  };
+  return null;
 }

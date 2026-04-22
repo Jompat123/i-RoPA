@@ -11,9 +11,24 @@ import {
   roleLabelTh,
   securityMeasuresDisplay,
 } from "@/lib/dpo/ropa-record-display";
+import { NOTO_SANS_THAI_REGULAR_BASE64 } from "@/lib/pdf/noto-sans-thai-base64";
 import type { DpoRecordsData } from "@/types/dpo";
 
 type Props = { data: DpoRecordsData };
+function ensureThaiPdfFont(doc: jsPDF): boolean {
+  try {
+    // Register static base64 font on every document instance.
+    doc.addFileToVFS("NotoSansThai-Regular.ttf", NOTO_SANS_THAI_REGULAR_BASE64);
+    doc.addFont("NotoSansThai-Regular.ttf", "NotoSansThai", "normal", "Identity-H");
+    const fontList = doc.getFontList();
+    if (!Object.prototype.hasOwnProperty.call(fontList, "NotoSansThai")) return false;
+    doc.setFont("NotoSansThai", "normal");
+    return true;
+  } catch {
+    // Fallback to default font instead of crashing export flow.
+    return false;
+  }
+}
 
 export function DpoRecordsPage({
   data,
@@ -30,6 +45,7 @@ export function DpoRecordsPage({
         roleLabel: roleLabelTh(row.role),
         processName: row.processName,
         department: row.department,
+        ownerName: row.ownerName || "",
         purpose: row.purpose,
         dataType: row.dataType,
         legalBasis: row.legalBasis,
@@ -305,67 +321,91 @@ export function DpoRecordsPage({
       unit: "pt",
       format: "a4",
     });
+    void (async () => {
+      const hasThaiFont = ensureThaiPdfFont(doc);
+      const pdfFont = hasThaiFont ? "NotoSansThai" : "helvetica";
+      doc.setFont(pdfFont, "normal");
+      const exportedAt = new Date().toLocaleString("th-TH");
+      doc.setFontSize(14);
+      doc.text("DPO Records", 40, 34);
+      doc.setFontSize(10);
+      doc.text(`Exported at ${exportedAt}`, 40, 52);
+      doc.text(`Records: ${exportRows.length}`, 40, 66);
+      doc.text(`Filters: ${activeFilters || "All"}`, 40, 80);
+      doc.text(
+        "Columns 14-15: Processor rows are marked as not applicable for this form.",
+        40,
+        94,
+      );
 
-    const exportedAt = new Date().toLocaleString("th-TH");
-    doc.setFontSize(14);
-    doc.text("DPO Records", 40, 34);
-    doc.setFontSize(10);
-    doc.text(`Exported at ${exportedAt}`, 40, 52);
-    doc.text(`Records: ${exportRows.length}`, 40, 66);
-    doc.text(`Filters: ${activeFilters || "All"}`, 40, 80);
-    doc.text(
-      "Columns 14-15: Processor rows are marked as not applicable for this form.",
-      40,
-      94,
-    );
+      autoTable(doc, {
+        startY: 106,
+        theme: "grid",
+        styles: { font: pdfFont, fontSize: 8, cellPadding: 3, overflow: "linebreak" },
+        headStyles: { font: pdfFont, fillColor: [241, 245, 249], textColor: [15, 23, 42] },
+        head: [[
+          "ลำดับ",
+          "บทบาท",
+          "กิจกรรมประมวลผล",
+          "แผนก/ผู้รับผิดชอบ",
+          "วัตถุประสงค์",
+          "ประเภทข้อมูล",
+          "ฐานกฎหมาย",
+          "ระยะเวลาจัดเก็บ",
+          "โอนต่างประเทศ",
+          "วิธีเก็บรักษา",
+          "ข้อ 14",
+          "ข้อ 15",
+        ]],
+        body:
+          exportRows.length > 0
+            ? exportRows.map((row) => [
+                row.order,
+                row.roleLabel,
+                row.processName,
+                `${row.department}${row.ownerName ? ` / ${row.ownerName}` : ""}`,
+                row.purpose,
+                row.dataType,
+                row.legalBasis,
+                row.crossBorderCountry,
+                row.storageMethod,
+                row.retentionPeriod,
+                row.rights14,
+                row.security15,
+              ])
+            : [[
+                "-",
+                "-",
+                "ไม่พบข้อมูลตามตัวกรอง",
+                "-",
+                "-",
+                "-",
+                "-",
+                "-",
+                "-",
+                "-",
+                "-",
+                "-",
+                "-",
+              ]],
+        columnStyles: {
+          0: { cellWidth: 24 },
+          1: { cellWidth: 48 },
+          2: { cellWidth: 78 },
+          3: { cellWidth: 90 },
+          4: { cellWidth: 78 },
+          5: { cellWidth: 52 },
+          6: { cellWidth: 64 },
+          7: { cellWidth: 54 },
+          8: { cellWidth: 62 },
+          9: { cellWidth: 62 },
+          10: { cellWidth: 76 },
+          11: { cellWidth: 76 },
+        },
+      });
 
-    autoTable(doc, {
-      startY: 106,
-      theme: "grid",
-      styles: { fontSize: 8, cellPadding: 3, overflow: "linebreak" },
-      headStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42] },
-      head: [[
-        "No.",
-        "Role",
-        "Process",
-        "Department/Owner",
-        "Purpose",
-        "Data Type",
-        "Legal Basis",
-        "Retention",
-        "Section 14",
-        "Section 15",
-      ]],
-      body:
-        exportRows.length > 0
-          ? exportRows.map((row) => [
-              row.order,
-              row.roleLabel,
-              row.processName,
-              row.department,
-              row.purpose,
-              row.dataType,
-              row.legalBasis,
-              row.retentionPeriod,
-              row.rights14,
-              row.security15,
-            ])
-          : [["-", "-", "No records for selected filters", "-", "-", "-", "-", "-", "-", "-"]],
-      columnStyles: {
-        0: { cellWidth: 26 },
-        1: { cellWidth: 65 },
-        2: { cellWidth: 95 },
-        3: { cellWidth: 80 },
-        4: { cellWidth: 90 },
-        5: { cellWidth: 75 },
-        6: { cellWidth: 75 },
-        7: { cellWidth: 55 },
-        8: { cellWidth: 95 },
-        9: { cellWidth: 95 },
-      },
-    });
-
-    doc.save(`dpo-records-${new Date().toISOString().slice(0, 10)}.pdf`);
+      doc.save(`dpo-records-${new Date().toISOString().slice(0, 10)}.pdf`);
+    })();
   }
 
   function setFilters(next: Record<string, string>) {

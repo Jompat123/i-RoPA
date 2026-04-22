@@ -35,6 +35,9 @@ export type MockRopaEntry = {
   ropaRole?: "controller" | "processor" | null;
   /** ข้อ 14 — มีเมื่อเป็น controller */
   rightsRefusalNote?: string | null;
+  destructionConfirmedAt?: string | null;
+  destructionProofUrl?: string | null;
+  destructionNote?: string | null;
 };
 
 type StoreState = { rows: MockRopaEntry[] };
@@ -75,6 +78,9 @@ function seedRows(): MockRopaEntry[] {
       reviewChecks: [],
       ropaRole: "controller",
       rightsRefusalNote: "ยังไม่มีเคสปฏิเสธคำขอ (บันทึกตามนโยบายองค์กร)",
+      destructionConfirmedAt: null,
+      destructionProofUrl: null,
+      destructionNote: null,
     },
     {
       id: "mock-2",
@@ -107,6 +113,9 @@ function seedRows(): MockRopaEntry[] {
       reviewChecks: [],
       ropaRole: "processor",
       rightsRefusalNote: null,
+      destructionConfirmedAt: null,
+      destructionProofUrl: null,
+      destructionNote: null,
     },
     {
       id: "mock-3",
@@ -138,6 +147,9 @@ function seedRows(): MockRopaEntry[] {
       reviewChecks: [],
       ropaRole: "controller",
       rightsRefusalNote: "",
+      destructionConfirmedAt: null,
+      destructionProofUrl: null,
+      destructionNote: null,
     },
   ];
 }
@@ -193,6 +205,9 @@ export function createMockRopa(payload: Partial<MockRopaEntry>): MockRopaEntry {
     reviewChecks: payload.reviewChecks ?? [],
     ropaRole: payload.ropaRole ?? "controller",
     rightsRefusalNote: payload.rightsRefusalNote ?? null,
+    destructionConfirmedAt: payload.destructionConfirmedAt ?? null,
+    destructionProofUrl: payload.destructionProofUrl ?? null,
+    destructionNote: payload.destructionNote ?? null,
   };
   store.rows.unshift(row);
   return row;

@@ -1,4 +1,8 @@
+"use client";
+
 import { Download, Search } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 import { DataSourceBanner } from "@/components/common/DataSourceBanner";
 import type { DestructionPageData, DestructionStatus } from "@/types/records";
@@ -10,7 +14,7 @@ type Props = {
 function statusStyle(status: DestructionStatus): { label: string; className: string } {
   switch (status) {
     case "destroyed":
-      return { label: "หมดอายุแล้ว", className: "bg-rose-100 text-rose-700" };
+      return { label: "ทำลายแล้ว", className: "bg-rose-100 text-rose-700" };
     case "near_expiry":
       return { label: "ใกล้หมดอายุ", className: "bg-amber-100 text-amber-700" };
     case "expired":
@@ -21,11 +25,50 @@ function statusStyle(status: DestructionStatus): { label: string; className: str
 }
 
 export function DestructionTablePage({ data }: Props) {
+  const router = useRouter();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [openConfirmId, setOpenConfirmId] = useState<string | null>(null);
+  const [proofUrlInput, setProofUrlInput] = useState("");
+  const [noteInput, setNoteInput] = useState("");
+
+  async function confirmDestruction(rowId: string) {
+    const proofUrl = proofUrlInput.trim();
+    const note = noteInput.trim();
+    if (!proofUrl) {
+      setError("กรุณากรอกลิงก์หลักฐานการทำลายก่อนยืนยัน");
+      return;
+    }
+    setError(null);
+    setBusyId(rowId);
+    try {
+      const res = await fetch(`/api/destruction/${rowId}/confirm`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ proofUrl, note }),
+      });
+      const payload = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setError(payload.error || "ยืนยันการทำลายข้อมูลไม่สำเร็จ");
+        return;
+      }
+      setOpenConfirmId(null);
+      setProofUrlInput("");
+      setNoteInput("");
+      router.refresh();
+    } catch {
+      setError("ยืนยันการทำลายข้อมูลไม่สำเร็จ");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
       <DataSourceBanner source={data.source} loadError={data.loadError ?? null} />
       <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
         <h1 className="text-3xl font-bold text-slate-900">ตรวจสอบการทำลายข้อมูล</h1>
+        {error ? <p className="mt-2 text-sm font-medium text-rose-600">{error}</p> : null}
 
         <form method="GET" className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-5">
           <select
@@ -129,14 +172,59 @@ export function DestructionTablePage({ data }: Props) {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        type="button"
-                        disabled
-                        title="ฟีเจอร์นี้จะเชื่อมกับ backend ในขั้นถัดไป"
-                        className="cursor-not-allowed rounded-lg bg-slate-300 px-4 py-2 text-xs font-semibold text-slate-600"
-                      >
-                        ยืนยันการทำลายข้อมูล
-                      </button>
+                      {openConfirmId === row.id ? (
+                        <div className="flex flex-col gap-2">
+                          <input
+                            type="url"
+                            value={proofUrlInput}
+                            onChange={(event) => setProofUrlInput(event.target.value)}
+                            placeholder="ลิงก์หลักฐาน (URL)"
+                            className="w-64 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-blue-500"
+                          />
+                          <input
+                            type="text"
+                            value={noteInput}
+                            onChange={(event) => setNoteInput(event.target.value)}
+                            placeholder="หมายเหตุ (ไม่บังคับ)"
+                            className="w-64 rounded-lg border border-slate-300 px-2 py-1 text-xs outline-none focus:border-blue-500"
+                          />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={busyId === row.id}
+                              onClick={() => void confirmDestruction(row.id)}
+                              className="rounded-lg bg-blue-700 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+                            >
+                              {busyId === row.id ? "กำลังบันทึก..." : "ยืนยัน"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busyId === row.id}
+                              onClick={() => {
+                                setOpenConfirmId(null);
+                                setProofUrlInput("");
+                                setNoteInput("");
+                                setError(null);
+                              }}
+                              className="rounded-lg bg-slate-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-600"
+                            >
+                              ยกเลิก
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={row.status === "destroyed"}
+                          onClick={() => {
+                            setError(null);
+                            setOpenConfirmId(row.id);
+                          }}
+                          className="rounded-lg bg-blue-700 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+                        >
+                          ยืนยันการทำลายข้อมูล
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

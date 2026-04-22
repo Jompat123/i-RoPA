@@ -116,7 +116,7 @@ export function DashboardHome({ data }: DashboardHomeProps) {
             </h2>
             {tasksSource === "empty" && taskList.length === 0 ? (
               <p className="text-sm text-slate-500">
-                ยังไม่มีรายการงาน — รอ endpoint จาก backend หรือเชื่อม API ภายหลัง
+                ยังไม่สามารถโหลดรายการงานได้ในขณะนี้
               </p>
             ) : (
               <ul className="flex flex-col gap-4">
@@ -126,6 +126,28 @@ export function DashboardHome({ data }: DashboardHomeProps) {
                     className="border-b border-slate-100 pb-4 text-sm text-slate-700 last:border-0 last:pb-0"
                   >
                     {task}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          <section className="rounded-2xl border border-amber-100 bg-amber-50/40 p-6 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-slate-800">ข้อมูลใกล้หมดอายุ (ภายใน 7 วัน)</h2>
+              <Link href="/destruction" className="text-sm font-semibold text-amber-700 hover:text-amber-800">
+                ไปหน้าทำลายข้อมูล
+              </Link>
+            </div>
+            {data.expiringSoon.length === 0 ? (
+              <p className="mt-3 text-sm text-slate-600">ยังไม่มีรายการที่ใกล้หมดอายุภายใน 7 วัน</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {data.expiringSoon.map((row) => (
+                  <li key={row.id} className="rounded-xl border border-amber-100 bg-white px-3 py-2 text-sm">
+                    <div className="font-medium text-slate-800">{row.processName}</div>
+                    <div className="mt-1 text-xs text-slate-600">
+                      {row.department} • ครบกำหนด {row.dueDateLabel} • เหลือ {row.daysLeft} วัน
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -151,7 +173,7 @@ export function DashboardHome({ data }: DashboardHomeProps) {
                 {recentActivities.length === 0 ? (
                   <tr>
                     <td colSpan={4} className="py-8 pl-2 text-center text-slate-500">
-                      ยังไม่มีกิจกรรมล่าสุด — รอ endpoint จาก backend
+                      ยังไม่มีกิจกรรมล่าสุด
                     </td>
                   </tr>
                 ) : (

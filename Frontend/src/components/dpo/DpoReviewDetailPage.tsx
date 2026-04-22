@@ -73,6 +73,16 @@ export function DpoReviewDetailPage({ data }: Props) {
 
   const isReadyToApprove = summary.todo === 0 && summary.fail === 0;
 
+  function markActiveStepAllPass() {
+    setStateById((prev) => {
+      const next = { ...prev };
+      for (const field of activeFields) {
+        next[field.id] = "pass";
+      }
+      return next;
+    });
+  }
+
   useEffect(() => {
     queueMicrotask(() => {
       const draft = readDraft(data.id);
@@ -190,9 +200,18 @@ export function DpoReviewDetailPage({ data }: Props) {
 
         <div className="space-y-4 p-5">
           <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-            <p className="mb-3 text-lg font-semibold text-slate-900">
-              {data.stepForms.find((x) => x.id === activeStep)?.label}
-            </p>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-lg font-semibold text-slate-900">
+                {data.stepForms.find((x) => x.id === activeStep)?.label}
+              </p>
+              <button
+                type="button"
+                onClick={markActiveStepAllPass}
+                className="rounded-full bg-emerald-100 px-4 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-200"
+              >
+                ผ่านทั้งหมดในขั้นนี้
+              </button>
+            </div>
             <div className="space-y-3">
               {activeFields.map((field) => {
                 const state = stateById[field.id];
@@ -283,19 +302,21 @@ export function DpoReviewDetailPage({ data }: Props) {
             </button>
             <button
               type="button"
-              className="rounded-full bg-slate-300 px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed"
-              disabled={isPending || !isReadyToApprove}
-              onClick={() => onSubmit("approve")}
-            >
-              {isPending ? "กำลังบันทึก..." : "อนุมัติคำขอ"}
-            </button>
-            <button
-              type="button"
-              className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-slate-900 hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isPending}
               onClick={() => onSubmit("reject")}
             >
               {isPending ? "กำลังบันทึก..." : "ส่งกลับให้ Data Owner แก้ไข"}
+            </button>
+            <button
+              type="button"
+              className={`rounded-full px-5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed ${
+                isReadyToApprove ? "bg-emerald-600 hover:bg-emerald-700" : "bg-slate-300"
+              }`}
+              disabled={isPending || !isReadyToApprove}
+              onClick={() => onSubmit("approve")}
+            >
+              {isPending ? "กำลังบันทึก..." : "อนุมัติคำขอ"}
             </button>
           </div>
         </div>

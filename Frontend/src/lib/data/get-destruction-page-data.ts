@@ -1,5 +1,6 @@
 import { apiPathRopaList } from "@/config/api-endpoints";
 import { destructionMockRows } from "@/data/records-mock";
+import { listMockRopa } from "@/lib/data/mock-ropa-store";
 import type { DestructionPageData, DestructionRow, DestructionStatus } from "@/types/records";
 import { getLiveApiSession } from "@/lib/data/api-session";
 import { shouldUseMockData } from "./runtime";
@@ -33,30 +34,61 @@ function toThaiLongDate(value: Date): string {
   }).format(value);
 }
 
-function deriveStatusByDate(createdAt: string, currentStatus: string): DestructionStatus {
-  if (currentStatus === "COMPLETE") return "destroyed";
+function parseRetentionYears(retentionPeriod?: string | null): number | null {
+  const raw = String(retentionPeriod ?? "").trim().toLowerCase();
+  if (!raw) return null;
+  if (raw.includes("ตลอดสัญญา") || raw.includes("contract")) return null;
+  const matched = raw.match(/\d+/);
+  if (!matched) return null;
+  const years = Number.parseInt(matched[0], 10);
+  if (!Number.isFinite(years) || years <= 0) return null;
+  return years;
+}
+
+function computeDueDate(createdAt: string, retentionPeriod?: string | null): Date | null {
   const created = new Date(createdAt);
-  if (Number.isNaN(created.getTime())) return "near_expiry";
-  const days = Math.floor((Date.now() - created.getTime()) / (1000 * 60 * 60 * 24));
-  if (days > 360) return "expired";
+  if (Number.isNaN(created.getTime())) return null;
+  const years = parseRetentionYears(retentionPeriod) ?? 1;
+  const dueDate = new Date(created);
+  dueDate.setFullYear(dueDate.getFullYear() + years);
+  return dueDate;
+}
+
+function deriveStatusByDate(dueDate: Date | null, proofUrl: string | null): DestructionStatus {
+  if (proofUrl) return "destroyed";
+  if (!dueDate) return "near_expiry";
+  if (dueDate.getTime() < Date.now()) return "expired";
   return "near_expiry";
 }
 
-function normalizeFromApi(rows: ApiRopaEntry[]): DestructionRow[] {
-  return rows.map((row) => {
-    const status = deriveStatusByDate(row.createdAt, row.status);
-    const dueDate = new Date(row.createdAt);
-    dueDate.setDate(dueDate.getDate() + 365);
-    const dueDateIso = dueDate.toISOString().slice(0, 10);
+function formatDueDate(dueDate: Date | null): { label: string; iso: string } {
+  if (!dueDate) {
+    return { label: "ไม่ระบุวันครบกำหนด", iso: "" };
+  }
+  return {
+    label: toThaiLongDate(dueDate),
+    iso: dueDate.toISOString().slice(0, 10),
+  };
+}
 
+function normalizeFromApi(rows: ApiRopaEntry[]): DestructionRow[] {
+  return rows
+    .filter((row) => {
+      const status = String(row.status || "").toUpperCase();
+      return status === "APPROVED" || status === "COMPLETE";
+    })
+    .map((row) => {
     const proofUrl = row.destructionProofUrl ?? row.proofUrl ?? null;
+    const dueDate = computeDueDate(row.createdAt, row.retentionPeriod);
+    const dueDateMeta = formatDueDate(dueDate);
+    const status = deriveStatusByDate(dueDate, proofUrl);
 
     return {
       id: row.id,
       activityName: row.processName || "-",
       departmentName: row.department?.name || "ไม่ระบุแผนก",
-      dueDateLabel: toThaiLongDate(dueDate),
-      dueDateIso,
+      dueDateLabel: dueDateMeta.label,
+      dueDateIso: dueDateMeta.iso,
       status,
       proofUrl,
       proofLabel: proofUrl ? "ดูหลักฐาน (PDF)" : "รอการอัปโหลด",
@@ -123,7 +155,20 @@ export async function getDestructionPageData(searchParams: Query): Promise<Destr
   let loadError: string | null = null;
 
   if (shouldUseMockData()) {
-    rawRows = destructionMockRows;
+    const dynamicMockRows = normalizeFromApi(
+      listMockRopa().map((row) => ({
+        id: row.id,
+        processName: row.processName,
+        status: row.status,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        retentionPeriod: row.retentionPeriod ?? null,
+        destructionProofUrl: row.destructionProofUrl ?? null,
+        proofUrl: row.destructionProofUrl ?? null,
+        department: row.department ?? null,
+      })),
+    );
+    rawRows = dynamicMockRows.length ? dynamicMockRows : destructionMockRows;
     source = "mock";
   } else {
     const session = await getLiveApiSession();

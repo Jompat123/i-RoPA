@@ -39,23 +39,47 @@ enum Role {
 model RopaEntry {
   id               String         @id @default(uuid())
   processName      String
+  role             RopaRole       @default(controller)
   purpose          String?
   personalDataTypes String[]
   dataCategory     String?
   dataType         DataType       @default(GENERAL)
+  dataControllerAddress String?
   collectionMethod String?
+  collectionMethodType CollectionMethodType?
   dataSource       String?
+  collectionSource CollectionSource?
   legalBasis       String?
+  minorConsentUnder10 Boolean?
+  minorConsent10to20 Boolean?
   crossBorderTransfer Boolean     @default(false)
   transferCountry  String?
+  transferToAffiliate Boolean?
+  transferMethod   String?
+  protectionStandard String?
+  legalExemption28 String?
   retentionPeriod  String?
+  storageDataType  StorageDataType?
   storageMethod    String?
+  rightsAccessNote String?
   deletionMethod   String?
+  disclosureNote   String?
+  rightsRefusalNote String?
+  securityMeasuresSummary String?
   securityOrg      String?
   securityTech     String?
   securityPhysical String?
+  securityAccessControl String?
+  securityUserResponsibility String?
+  securityAudit String?
   riskLevel        RiskLevel      @default(LOW)
   status           EntryStatus    @default(DRAFT)
+  reviewDecision   ReviewDecision?
+  reviewNote       String?
+  reviewChecks     Json?
+  destructionConfirmedAt DateTime?
+  destructionProofUrl String?
+  destructionNote String?
   departmentId     String
   createdById      String
   createdAt        DateTime       @default(now())
@@ -77,7 +101,35 @@ enum RiskLevel {
 
 enum EntryStatus {
   DRAFT
+  PENDING
+  NEEDS_FIX
+  APPROVED
   COMPLETE
+}
+
+enum RopaRole {
+  controller
+  processor
+}
+
+enum CollectionMethodType {
+  soft
+  hard
+}
+
+enum CollectionSource {
+  direct
+  other
+}
+
+enum StorageDataType {
+  soft
+  hard
+}
+
+enum ReviewDecision {
+  approve
+  reject
 }
 
 model AuditLog {

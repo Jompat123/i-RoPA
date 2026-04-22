@@ -39,6 +39,11 @@ export function apiPathAdminDashboardSummary(): string {
   return envPath("NEXT_PUBLIC_API_ADMIN_DASHBOARD_SUMMARY_PATH", "/api/dashboard/summary");
 }
 
+/** Admin — Audit logs ล่าสุด */
+export function apiPathAdminAuditLogs(): string {
+  return envPath("NEXT_PUBLIC_API_ADMIN_AUDIT_LOGS_PATH", "/api/audit-logs");
+}
+
 /** Login proxy — ตรงกับ `AUTH_LOGIN_PATH` ใน route handler */
 export function apiPathAuthLogin(): string {
   const raw = process.env.AUTH_LOGIN_PATH ?? "/api/auth/login";

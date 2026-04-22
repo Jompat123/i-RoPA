@@ -184,6 +184,7 @@ const mockRecord = (
   role,
   processName,
   department,
+  ownerName: "-",
   purpose,
   dataSourceName: role === "controller" ? department : null,
   processorName: role === "processor" ? department : null,

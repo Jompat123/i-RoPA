@@ -86,6 +86,7 @@ export type DpoRecordRow = {
   role: RopaEntityRole;
   processName: string;
   department: string;
+  ownerName: string;
   purpose: string;
   dataSourceName: string | null;
   processorName: string | null;

@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 
 import { apiPathRopaList } from "@/config/api-endpoints";
 import { requireApiRole } from "@/lib/auth/require-api-role";
+import { extractErrorMessage, sanitizeRopaPayload } from "@/lib/contracts/backend-contract";
 import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/data/runtime";
 import { createMockRopa } from "@/lib/data/mock-ropa-store";
 
 type DraftPayload = {
   ropaRole?: "controller" | "processor";
+  role?: "controller" | "processor";
   processName: string;
   purpose?: string | null;
   personalDataTypes?: string[];
@@ -32,9 +34,19 @@ export async function POST(request: Request) {
   if (denied) return denied;
 
   const body = (await request.json()) as DraftPayload;
+  const ropaRole = body.role ?? body.ropaRole ?? "controller";
 
   if (!body.processName || !body.processName.trim()) {
     return NextResponse.json({ error: "processName is required" }, { status: 400 });
+  }
+  if (
+    body.status === "PENDING" &&
+    (!body.securityPhysical?.trim() || !body.securityOrg?.trim())
+  ) {
+    return NextResponse.json(
+      { error: "securityPhysical and securityOrg are required before submit" },
+      { status: 400 },
+    );
   }
 
   if (shouldUseMockData()) {
@@ -47,7 +59,7 @@ export async function POST(request: Request) {
       collectionMethod: body.collectionMethod ?? null,
       dataSource: body.dataSource ?? null,
       dataControllerAddress: body.dataControllerAddress ?? null,
-      ropaRole: body.ropaRole ?? "controller",
+      ropaRole,
       legalBasis: body.legalBasis ?? null,
       crossBorderTransfer: body.crossBorderTransfer ?? false,
       transferCountry: body.transferCountry ?? null,
@@ -87,8 +99,9 @@ export async function POST(request: Request) {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
+      body: JSON.stringify(sanitizeRopaPayload({
         processName: body.processName.trim(),
+        role: ropaRole,
         purpose: body.purpose ?? null,
         personalDataTypes: body.personalDataTypes ?? [],
         dataCategory: body.dataCategory ?? null,
@@ -96,7 +109,6 @@ export async function POST(request: Request) {
         collectionMethod: body.collectionMethod ?? null,
         dataSource: body.dataSource ?? null,
         dataControllerAddress: body.dataControllerAddress ?? null,
-        ropaRole: body.ropaRole ?? "controller",
         legalBasis: body.legalBasis ?? null,
         crossBorderTransfer: body.crossBorderTransfer ?? false,
         transferCountry: body.transferCountry ?? null,
@@ -107,13 +119,13 @@ export async function POST(request: Request) {
         securityPhysical: body.securityPhysical ?? null,
         securityOrg: body.securityOrg ?? null,
         status: body.status ?? "DRAFT",
-      }),
+      })),
     });
 
     const payload = await res.json().catch(() => ({}));
     if (!res.ok) {
       return NextResponse.json(
-        { error: (payload as { error?: string }).error ?? "Failed to save draft" },
+        { error: extractErrorMessage(payload, "Failed to save draft") },
         { status: res.status },
       );
     }

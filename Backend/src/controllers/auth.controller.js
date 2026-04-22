@@ -1,22 +1,26 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
+const { badRequest, unauthorized } = require('../lib/http-error');
 
 const prisma = new PrismaClient();
 
 const login = async (email, password) => {
+  if (!email || !password) {
+    throw badRequest('email and password are required');
+  }
   const user = await prisma.user.findUnique({
     where: { email },
     include: { department: true }
   });
 
   if (!user) {
-    throw new Error('Invalid credentials');
+    throw unauthorized('Invalid credentials');
   }
 
   const isValid = await bcrypt.compare(password, user.passwordHash);
   if (!isValid) {
-    throw new Error('Invalid credentials');
+    throw unauthorized('Invalid credentials');
   }
 
   const token = jwt.sign(

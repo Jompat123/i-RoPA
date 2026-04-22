@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 
 import { apiPathUsers } from "@/config/api-endpoints";
 import { requireApiRole } from "@/lib/auth/require-api-role";
+import { extractErrorMessage, toBackendRole } from "@/lib/contracts/backend-contract";
 import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/data/runtime";
 
 type CreateUserPayload = {
   name: string;
   email: string;
   password: string;
-  role: "ADMIN" | "VIEWER" | "DEPARTMENT_USER" | "AUDITOR";
+  role: "ADMIN" | "DPO" | "DATA_OWNER" | "AUDITOR";
   departmentId?: string | null;
 };
 
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "name, email, password are required" }, { status: 400 });
   }
   if (
-    (body.role === "DEPARTMENT_USER" || body.role === "VIEWER" || body.role === "AUDITOR") &&
+    (body.role === "DATA_OWNER" || body.role === "DPO" || body.role === "AUDITOR") &&
     !body.departmentId
   ) {
     return NextResponse.json(
@@ -73,9 +74,18 @@ export async function POST(request: Request) {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        ...body,
+        role: toBackendRole(body.role),
+      }),
     });
     const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: extractErrorMessage(payload, "Failed to create user") },
+        { status: res.status },
+      );
+    }
     return NextResponse.json(payload, { status: res.status });
   } catch {
     return NextResponse.json({ error: "Failed to create user" }, { status: 500 });

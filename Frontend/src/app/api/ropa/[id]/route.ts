@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { apiPathRopaItem } from "@/config/api-endpoints";
 import { requireApiRole } from "@/lib/auth/require-api-role";
+import { extractErrorMessage, sanitizeRopaPayload } from "@/lib/contracts/backend-contract";
 import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/data/runtime";
 import { getMockRopaById, updateMockRopa } from "@/lib/data/mock-ropa-store";
 
@@ -40,7 +41,7 @@ export async function PUT(request: Request, context: Ctx) {
   if (denied) return denied;
 
   const { id } = await context.params;
-  const body = await request.json();
+  const body = sanitizeRopaPayload((await request.json()) as Record<string, unknown>);
 
   if (shouldUseMockData()) {
     const updated = updateMockRopa(id, body);
@@ -62,6 +63,12 @@ export async function PUT(request: Request, context: Ctx) {
       body: JSON.stringify(body),
     });
     const payload = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: extractErrorMessage(payload, "Failed to update ROPA item") },
+        { status: res.status },
+      );
+    }
     return NextResponse.json(payload, { status: res.status });
   } catch {
     return NextResponse.json({ error: "Failed to update ROPA item" }, { status: 500 });

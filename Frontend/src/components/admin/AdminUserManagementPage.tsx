@@ -19,17 +19,26 @@ function toApiRole(role: AdminUserRole): RoleApi {
 
 export function AdminUserManagementPage({ data }: Props) {
   const [rows, setRows] = useState<AdminUserRow[]>(data.rows);
+  const [departments, setDepartments] = useState<string[]>(data.departments);
+  const [departmentOptions, setDepartmentOptions] = useState(data.departmentOptions);
   const [search, setSearch] = useState(data.filters.q);
   const [roleFilter, setRoleFilter] = useState<"all" | AdminUserRole>(data.filters.role);
   const [departmentFilter, setDepartmentFilter] = useState(data.filters.department);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", departmentId: "" });
   const [showAdd, setShowAdd] = useState(false);
+  const [showAddDepartment, setShowAddDepartment] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
     role: "DATA_OWNER" as AdminUserRole,
     departmentId: "",
+  });
+  const [departmentForm, setDepartmentForm] = useState({
+    name: "",
+    description: "",
   });
 
   const filtered = useMemo(() => {
@@ -75,6 +84,62 @@ export function AdminUserManagementPage({ data }: Props) {
     await patchUser(row.id, { password });
   }
 
+  function startEditUser(row: AdminUserRow) {
+    setEditingId(row.id);
+    setEditForm({
+      name: row.name,
+      departmentId: row.departmentId || "",
+    });
+  }
+
+  function cancelEditUser() {
+    setEditingId(null);
+    setEditForm({ name: "", departmentId: "" });
+  }
+
+  async function handleSaveUser(row: AdminUserRow) {
+    const nextName = editForm.name.trim();
+    if (!nextName) {
+      window.alert("กรุณากรอกชื่อผู้ใช้");
+      return;
+    }
+    const selectedDepartment = departmentOptions.find((dep) => dep.id === editForm.departmentId);
+    await patchUser(row.id, {
+      name: nextName,
+      departmentId: editForm.departmentId || null,
+    });
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === row.id
+          ? {
+              ...r,
+              name: nextName,
+              departmentId: editForm.departmentId || null,
+              department: selectedDepartment?.name || "Unknown",
+            }
+          : r,
+      ),
+    );
+    cancelEditUser();
+  }
+
+  async function handleDeleteUser(row: AdminUserRow) {
+    if (!window.confirm(`ยืนยันการลบผู้ใช้ ${row.name}?`)) return;
+    setSavingId(row.id);
+    try {
+      const res = await fetch(`/api/admin/users/${row.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(j?.error || "ลบผู้ใช้ไม่สำเร็จ");
+      }
+      setRows((prev) => prev.filter((r) => r.id !== row.id));
+    } finally {
+      setSavingId(null);
+    }
+  }
+
   async function handleCreateUser() {
     if (!form.name.trim() || !form.email.trim() || !form.password.trim()) return;
     if ((form.role === "DATA_OWNER" || form.role === "DPO" || form.role === "AUDITOR") && !form.departmentId) {
@@ -93,7 +158,7 @@ export function AdminUserManagementPage({ data }: Props) {
       }),
     });
     if (!res.ok) return;
-    const selectedDepartment = data.departmentOptions.find((dep) => dep.id === form.departmentId);
+    const selectedDepartment = departmentOptions.find((dep) => dep.id === form.departmentId);
     const created = (await res.json()) as {
       id: string;
       name: string;
@@ -117,19 +182,86 @@ export function AdminUserManagementPage({ data }: Props) {
     setShowAdd(false);
   }
 
+  async function handleCreateDepartment() {
+    const name = departmentForm.name.trim();
+    if (!name) {
+      window.alert("กรุณากรอกชื่อแผนก");
+      return;
+    }
+    const res = await fetch("/api/admin/departments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name,
+        description: departmentForm.description.trim() || null,
+      }),
+    });
+    const payload = (await res.json().catch(() => null)) as { id?: string; name?: string; error?: string } | null;
+    if (!res.ok) {
+      window.alert(payload?.error || "เพิ่มแผนกไม่สำเร็จ");
+      return;
+    }
+    if (!payload?.id || !payload?.name) return;
+
+    const depName = payload.name.trim();
+    setDepartmentOptions((prev) => {
+      if (prev.some((dep) => dep.id === payload.id)) return prev;
+      return [...prev, { id: payload.id!, name: depName }].sort((a, b) => a.name.localeCompare(b.name, "th"));
+    });
+    setDepartments((prev) => {
+      if (prev.includes(depName)) return prev;
+      return [...prev, depName].sort((a, b) => a.localeCompare(b, "th"));
+    });
+    setDepartmentForm({ name: "", description: "" });
+    setShowAddDepartment(false);
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
       <DataSourceBanner source={data.source} loadError={data.loadError ?? null} />
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-slate-900">User Management</h1>
-        <button
-          type="button"
-          onClick={() => setShowAdd((s) => !s)}
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800"
-        >
-          <Plus className="h-4 w-4" /> Add User
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowAddDepartment((s) => !s)}
+            className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+          >
+            <Plus className="h-4 w-4" /> Add Department
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAdd((s) => !s)}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-800"
+          >
+            <Plus className="h-4 w-4" /> Add User
+          </button>
+        </div>
       </div>
+
+      {showAddDepartment ? (
+        <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-100 bg-white p-4 md:grid-cols-[1fr_2fr_auto]">
+          <input
+            placeholder="ชื่อแผนก"
+            value={departmentForm.name}
+            onChange={(e) => setDepartmentForm((p) => ({ ...p, name: e.target.value }))}
+            className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          />
+          <input
+            placeholder="รายละเอียด (ไม่บังคับ)"
+            value={departmentForm.description}
+            onChange={(e) => setDepartmentForm((p) => ({ ...p, description: e.target.value }))}
+            className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          />
+          <button
+            type="button"
+            onClick={handleCreateDepartment}
+            className="rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+          >
+            บันทึกแผนก
+          </button>
+        </div>
+      ) : null}
 
       {showAdd ? (
         <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-100 bg-white p-4 md:grid-cols-6">
@@ -167,7 +299,7 @@ export function AdminUserManagementPage({ data }: Props) {
             className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
           >
             <option value="">เลือกแผนก</option>
-            {data.departmentOptions.map((dep) => (
+            {departmentOptions.map((dep) => (
               <option key={dep.id} value={dep.id}>
                 {dep.name}
               </option>
@@ -211,7 +343,7 @@ export function AdminUserManagementPage({ data }: Props) {
             className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500"
           >
             <option value="">Department</option>
-            {data.departments.map((dep) => (
+            {departments.map((dep) => (
               <option key={dep} value={dep}>
                 {dep}
               </option>
@@ -234,7 +366,17 @@ export function AdminUserManagementPage({ data }: Props) {
             <tbody>
               {filtered.map((row) => (
                 <tr key={row.id} className="border-t border-slate-100 text-slate-700">
-                  <td className="px-3 py-2">{row.name}</td>
+                  <td className="px-3 py-2">
+                    {editingId === row.id ? (
+                      <input
+                        value={editForm.name}
+                        onChange={(e) => setEditForm((p) => ({ ...p, name: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:border-blue-500"
+                      />
+                    ) : (
+                      row.name
+                    )}
+                  </td>
                   <td className="px-3 py-2">{row.email}</td>
                   <td className="px-3 py-2">
                     <select
@@ -248,7 +390,24 @@ export function AdminUserManagementPage({ data }: Props) {
                       <option value="DATA_OWNER">Data Owner</option>
                     </select>
                   </td>
-                  <td className="px-3 py-2">{row.department}</td>
+                  <td className="px-3 py-2">
+                    {editingId === row.id ? (
+                      <select
+                        value={editForm.departmentId}
+                        onChange={(e) => setEditForm((p) => ({ ...p, departmentId: e.target.value }))}
+                        className="w-full rounded-lg border border-slate-200 px-2 py-1 text-xs outline-none focus:border-blue-500"
+                      >
+                        <option value="">ไม่ระบุแผนก</option>
+                        {departmentOptions.map((dep) => (
+                          <option key={dep.id} value={dep.id}>
+                            {dep.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      row.department
+                    )}
+                  </td>
                   <td className="px-3 py-2">
                     <span
                       className={`rounded-full px-3 py-1 text-xs font-semibold ${
@@ -277,6 +436,43 @@ export function AdminUserManagementPage({ data }: Props) {
                         className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-50"
                       >
                         <KeyRound className="h-3.5 w-3.5" /> Change Pass
+                      </button>
+                      {editingId === row.id ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => void handleSaveUser(row)}
+                            disabled={savingId === row.id}
+                            className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-50 disabled:opacity-50"
+                          >
+                            Save
+                          </button>
+                          <button
+                            type="button"
+                            onClick={cancelEditUser}
+                            disabled={savingId === row.id}
+                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-50"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => startEditUser(row)}
+                          disabled={savingId === row.id}
+                          className="inline-flex items-center gap-1 rounded-lg border border-indigo-200 px-2 py-1 text-xs text-indigo-700 hover:bg-indigo-50 disabled:opacity-50"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => void handleDeleteUser(row)}
+                        disabled={savingId === row.id}
+                        className="inline-flex items-center gap-1 rounded-lg border border-rose-200 px-2 py-1 text-xs text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                      >
+                        Delete
                       </button>
                     </div>
                   </td>

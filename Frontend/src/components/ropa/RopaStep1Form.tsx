@@ -139,6 +139,7 @@ type Props = {
 };
 
 type ApiRopaDetail = {
+  role?: string | null;
   processName?: string | null;
   purpose?: string | null;
   ropaRole?: string | null;
@@ -283,7 +284,10 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
 
         setState((prev) => ({
           ...prev,
-          role: String(payload.ropaRole || "").toLowerCase() === "processor" ? "processor" : prev.role,
+          role:
+            String((payload.role ?? payload.ropaRole) || "").toLowerCase() === "processor"
+              ? "processor"
+              : "controller",
           activity: payload.processName?.trim() || prev.activity,
           purpose: payload.purpose?.trim() || prev.purpose,
           controllerInfoAddress: payload.dataControllerAddress?.trim() || prev.controllerInfoAddress,
@@ -407,6 +411,9 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
       return "กรุณาระบุระยะเวลาการเก็บรักษา (ปี)";
     }
     if (!state.deletionMethod.trim()) return "กรุณากรอกวิธีการลบหรือทำลายข้อมูล";
+    if (!state.securityMeasureNote.trim()) {
+      return "กรุณากรอกมาตรการความปลอดภัยให้ครบ (อย่างน้อย Physical/Organizational)";
+    }
     return null;
   }
 
@@ -447,7 +454,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
         method: recordId ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ropaRole: state.role,
+          role: state.role,
           processName: state.activity || "แบบฟอร์มที่ยังไม่ระบุชื่อกิจกรรม",
           purpose: state.purpose || null,
           personalDataTypes: state.personalDataTags,
@@ -501,7 +508,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
     saveDraftLocally();
 
     const payload = {
-      ropaRole: state.role,
+      role: state.role,
       processName: state.activity || "แบบฟอร์มที่ยังไม่ระบุชื่อกิจกรรม",
       purpose: state.purpose || null,
       personalDataTypes: state.personalDataTags,
@@ -520,14 +527,9 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
       deletionMethod: state.deletionMethod || null,
       securityTech:
         state.securityMeasure === "technical" ? state.securityMeasureNote || "TECHNICAL" : null,
-      securityPhysical:
-        state.securityMeasure === "physical" || state.securityMeasure === "access_control"
-          ? state.securityMeasureNote || "PHYSICAL_OR_ACCESS"
-          : null,
-      securityOrg:
-        state.securityMeasure === "organizational"
-          ? state.securityMeasureNote || "ORGANIZATIONAL"
-          : null,
+      // Keep both fields populated for downstream DPO review/export consistency.
+      securityPhysical: state.securityMeasureNote || null,
+      securityOrg: state.securityMeasureNote || null,
       reviewNote: null,
       reviewChecks: [],
       status: "PENDING",

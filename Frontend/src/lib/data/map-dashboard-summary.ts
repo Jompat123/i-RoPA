@@ -23,25 +23,26 @@ export function emptySummaryCards(): SummaryCard[] {
 export type ApiDashboardSummary = {
   totalRopa: number;
   byStatus?: Record<string, number>;
+  recentActivities?: Array<{
+    id?: string;
+    processName?: string;
+    departmentName?: string;
+    status?: string;
+    updatedAt?: string;
+  }>;
 };
 
-/**
- * แมปข้อมูลจริงจาก API ไปการ์ด 4 ใบ
- * โมเดลปัจจุบันมี EntryStatus แค่ DRAFT/COMPLETE — จึง map แบบประมาณ:
- * - รอการอนุมัติ ≈ DRAFT
- * - อนุมัติแล้ว ≈ COMPLETE
- * - ต้องแก้ไข = 0 จนกว่า backend จะมีสถานะแยก
- */
 export function mapApiSummaryToCards(api: ApiDashboardSummary): SummaryCard[] {
   const by = api.byStatus ?? {};
-  const draft = by.DRAFT ?? 0;
-  const complete = by.COMPLETE ?? 0;
+  const pending = (by.PENDING ?? 0) + (by.DRAFT ?? 0);
+  const needsFix = by.NEEDS_FIX ?? by.REJECTED ?? 0;
+  const approved = (by.APPROVED ?? 0) + (by.COMPLETE ?? 0);
 
   const counts = {
     total: api.totalRopa,
-    pending: draft,
-    edit: 0,
-    approved: complete,
+    pending,
+    edit: needsFix,
+    approved,
   } as const;
 
   return SUMMARY_TYPES.map((type, index) => ({

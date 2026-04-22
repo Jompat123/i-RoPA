@@ -16,6 +16,7 @@ type ApiRopa = {
   retentionPeriod?: string | null;
   dataType?: string | null;
   purpose?: string | null;
+  role?: string | null;
   ropaRole?: string | null;
   dataControllerRole?: string | null;
   dataSource?: string | null;
@@ -23,19 +24,32 @@ type ApiRopa = {
   personalDataTypes?: string[] | string | null;
   dataCategory?: string | null;
   collectionMethod?: string | null;
+  collectionMethodType?: string | null;
+  collectionSource?: string | null;
+  minorConsentUnder10?: boolean | null;
+  minorConsent10to20?: boolean | null;
   crossBorderTransfer?: boolean | null;
   transferCountry?: string | null;
   transferToAffiliate?: boolean | null;
   transferMethod?: string | null;
   protectionStandard?: string | null;
   legalExemption28?: string | null;
+  storageDataType?: string | null;
   storageMethod?: string | null;
+  rightsAccessNote?: string | null;
   deletionMethod?: string | null;
   disclosureNote?: string | null;
   rightsRefusalNote?: string | null;
+  securityMeasuresSummary?: string | null;
   securityTech?: string | null;
   securityPhysical?: string | null;
   securityOrg?: string | null;
+  securityAccessControl?: string | null;
+  securityUserResponsibility?: string | null;
+  securityAudit?: string | null;
+  destructionConfirmedAt?: string | null;
+  destructionProofUrl?: string | null;
+  createdBy?: { name?: string | null } | null;
 };
 
 function getParam(q: Query, key: string): string {
@@ -95,6 +109,7 @@ function fromMockEntry(row: MockRopaEntry): DpoRecordRow {
     role,
     processName: row.processName || "-",
     department: row.department?.name || "Unknown",
+    ownerName: row.createdBy?.name || "-",
     purpose: row.purpose || "-",
     dataSourceName: role === "controller" ? row.dataSource ?? null : null,
     processorName: role === "processor" ? row.dataSource ?? null : null,
@@ -131,13 +146,27 @@ function fromMockEntry(row: MockRopaEntry): DpoRecordRow {
 }
 
 function fromApiEntry(row: ApiRopa): DpoRecordRow {
-  const role = parseApiRole(row.ropaRole ?? row.dataControllerRole);
+  const role = parseApiRole(row.role ?? row.ropaRole ?? row.dataControllerRole);
   const collection = parseCollectionMethod(row.collectionMethod);
+  const collectionMethodTypeRaw = String(row.collectionMethodType ?? "").toLowerCase();
+  const collectionSourceRaw = String(row.collectionSource ?? "").toLowerCase();
+  const storageDataTypeRaw = String(row.storageDataType ?? "").toLowerCase();
+
+  const collectionMethodType =
+    collectionMethodTypeRaw === "soft" || collectionMethodTypeRaw === "hard"
+      ? collectionMethodTypeRaw
+      : collection.method;
+  const collectionSource =
+    collectionSourceRaw === "direct" || collectionSourceRaw === "other"
+      ? collectionSourceRaw
+      : collection.source;
+
   return {
     id: row.id,
     role,
     processName: row.processName || "-",
     department: row.department?.name || "Unknown",
+    ownerName: row.createdBy?.name || "-",
     purpose: row.purpose || "-",
     dataSourceName: role === "controller" ? row.dataSource ?? null : null,
     processorName: role === "processor" ? row.dataSource ?? null : null,
@@ -145,36 +174,34 @@ function fromApiEntry(row: ApiRopa): DpoRecordRow {
     personalDataTypes: parsePersonalDataTypes(row.personalDataTypes),
     dataCategory: row.dataCategory ?? null,
     dataType: row.dataType || "-",
-    collectionMethodType: collection.method,
-    collectionSource: collection.source,
+    collectionMethodType,
+    collectionSource,
     legalBasis: row.legalBasis || "-",
-    minorConsentUnder10: null,
-    minorConsent10to20: null,
+    minorConsentUnder10: row.minorConsentUnder10 ?? null,
+    minorConsent10to20: row.minorConsent10to20 ?? null,
     crossBorderTransfer: row.crossBorderTransfer ?? null,
     transferCountry: row.transferCountry ?? null,
     transferToAffiliate: row.transferToAffiliate ?? null,
     transferMethod: row.transferMethod ?? null,
     protectionStandard: row.protectionStandard ?? null,
     legalExemption28: row.legalExemption28 ?? null,
-    storageDataType: null,
+    storageDataType:
+      storageDataTypeRaw === "soft" || storageDataTypeRaw === "hard" ? storageDataTypeRaw : null,
     storageMethod: row.storageMethod ?? null,
     retentionPeriod: row.retentionPeriod || "-",
-    rightsAccessNote: null,
+    rightsAccessNote: row.rightsAccessNote ?? null,
     deletionMethod: row.deletionMethod ?? null,
     disclosureNote: row.disclosureNote ?? null,
     rightsRefusalNote: role === "processor" ? null : row.rightsRefusalNote ?? null,
-    securityMeasuresSummary: buildSecuritySummary(
-      role,
-      row.securityTech,
-      row.securityPhysical,
-      row.securityOrg,
-    ),
+    securityMeasuresSummary:
+      row.securityMeasuresSummary ??
+      buildSecuritySummary(role, row.securityTech, row.securityPhysical, row.securityOrg),
     securityOrg: row.securityOrg ?? null,
     securityTech: row.securityTech ?? null,
     securityPhysical: row.securityPhysical ?? null,
-    securityAccessControl: null,
-    securityUserResponsibility: null,
-    securityAudit: null,
+    securityAccessControl: row.securityAccessControl ?? null,
+    securityUserResponsibility: row.securityUserResponsibility ?? null,
+    securityAudit: row.securityAudit ?? null,
   };
 }
 
@@ -182,7 +209,11 @@ function normalizeRows(rows: ApiRopa[]): DpoRecordRow[] {
   return rows
     .filter((row) => {
       const status = String(row.status || "").toUpperCase();
-      return status === "COMPLETE" || status === "APPROVED";
+      const isApprovedOrComplete = status === "COMPLETE" || status === "APPROVED";
+      const isDestroyed = Boolean(
+        String(row.destructionProofUrl || "").trim() || String(row.destructionConfirmedAt || "").trim(),
+      );
+      return isApprovedOrComplete && !isDestroyed;
     })
     .map(fromApiEntry);
 }
@@ -191,7 +222,11 @@ function normalizeMockRows(rows: MockRopaEntry[]): DpoRecordRow[] {
   return rows
     .filter((row) => {
       const status = String(row.status || "").toUpperCase();
-      return status === "COMPLETE" || status === "APPROVED";
+      const isApprovedOrComplete = status === "COMPLETE" || status === "APPROVED";
+      const isDestroyed = Boolean(
+        String(row.destructionProofUrl || "").trim() || String(row.destructionConfirmedAt || "").trim(),
+      );
+      return isApprovedOrComplete && !isDestroyed;
     })
     .map(fromMockEntry);
 }

@@ -136,10 +136,10 @@ export function AdminDashboardHome({ data }: Props) {
 
         <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-slate-800">บันทึกประวัติการใช้งานล่าสุด</h2>
-          <p className="mt-1 text-xs text-slate-500">รอ endpoint audit log จาก backend</p>
+          <p className="mt-1 text-xs text-slate-500">ดึงจาก backend (สูงสุด 20 รายการล่าสุด)</p>
           <div className="mt-4 max-h-[420px] overflow-y-auto pr-1">
             {data.recentLogs.length === 0 ? (
-              <p className="text-sm text-slate-500">ยังไม่มีบันทึก — ข้อมูลจะแสดงเมื่อเชื่อม API</p>
+              <p className="text-sm text-slate-500">ยังไม่มีบันทึกการใช้งานล่าสุด</p>
             ) : (
               <ul className="space-y-3 text-sm text-slate-600">
                 {data.recentLogs.map((log, index) => (

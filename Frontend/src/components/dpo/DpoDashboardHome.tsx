@@ -188,7 +188,7 @@ export function DpoDashboardHome({ data }: Props) {
       <section className="rounded-2xl border border-slate-100 bg-white shadow-sm">
         <div className="border-b border-slate-100 px-5 py-4">
           <h2 className="text-lg font-semibold text-slate-800">บันทึกกิจกรรมล่าสุด</h2>
-          <p className="mt-1 text-xs text-slate-500">รอ endpoint audit log จาก backend</p>
+          <p className="mt-1 text-xs text-slate-500">แสดงกิจกรรมล่าสุดรวมรายการที่ยืนยันทำลายข้อมูลแล้ว</p>
         </div>
         <div className="h-56 overflow-y-scroll px-5 py-3 text-sm text-slate-600">
           {data.recentLogs.length === 0 ? (

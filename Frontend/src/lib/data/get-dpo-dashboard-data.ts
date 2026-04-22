@@ -16,6 +16,8 @@ type ApiRopa = {
   revisionCount?: number | null;
   version?: number | null;
   isUpdate?: boolean | null;
+  destructionConfirmedAt?: string | null;
+  destructionProofUrl?: string | null;
   department?: { name?: string | null } | null;
   createdBy?: { name?: string | null } | null;
 };
@@ -32,6 +34,14 @@ function thaiDate(value: string): string {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "-";
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear() + 543}`;
+}
+
+function thaiDateTime(value: string): string {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "-";
+  const date = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear() + 543}`;
+  const time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return `${date} ${time}`;
 }
 
 function asPositiveInt(value: unknown): number | null {
@@ -98,8 +108,16 @@ function fromRows(rows: ApiRopa[], source: "api" | "mock"): DpoDashboardData {
       legalBasis: row.legalBasis || "",
       dataType: String(row.dataType || "").trim().toUpperCase(),
       updated,
+      destroyedAt: row.destructionConfirmedAt || null,
+      destructionProofUrl: row.destructionProofUrl || null,
     };
   });
+
+  const destructionLogs = normalized
+    .filter((row) => Boolean(String(row.destroyedAt || "").trim() || String(row.destructionProofUrl || "").trim()))
+    .sort((a, b) => new Date(b.destroyedAt || 0).getTime() - new Date(a.destroyedAt || 0).getTime())
+    .slice(0, 10)
+    .map((row) => `ทำลายข้อมูลแล้ว: ${row.processName} (${row.department}) • ${thaiDateTime(row.destroyedAt || "")}`);
 
   const departmentStatus = [...new Set(normalized.map((x) => x.department))]
     .map((department) => {
@@ -154,7 +172,7 @@ function fromRows(rows: ApiRopa[], source: "api" | "mock"): DpoDashboardData {
       ownerName: row.ownerName,
       status: row.status,
     })),
-    recentLogs: source === "mock" ? dpoDashboardMock.recentLogs : [],
+    recentLogs: destructionLogs.length > 0 ? destructionLogs : source === "mock" ? dpoDashboardMock.recentLogs : [],
   };
 }
 
@@ -171,6 +189,8 @@ export async function getDpoDashboardData(): Promise<DpoDashboardData> {
       revisionCount: row.reviewChecks?.length ?? null,
       version: null,
       isUpdate: null,
+      destructionConfirmedAt: row.destructionConfirmedAt ?? null,
+      destructionProofUrl: row.destructionProofUrl ?? null,
       department: row.department ?? null,
       createdBy: row.createdBy ?? null,
     }));
