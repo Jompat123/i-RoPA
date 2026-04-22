@@ -1,4 +1,5 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+// Backend ต้องรันคนละพอร์ตกับ Next.js (มัก 3001) — ดู Frontend/.env.local.example
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 export const api = {
   async login(email, password) {

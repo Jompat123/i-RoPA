@@ -7,11 +7,13 @@ const getSummary = async (req) => {
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-  // Data Owner: เห็นข้อมูลของ department ตัวเองเท่านั้น
-  // ADMIN/VIEWER: เห็นข้อมูลทั้งหมด
+  // Data Owner: นับเฉพาะรายการที่ตัวเองสร้าง — สอดคล้องกับ GET /api/ropa
+  // ADMIN / VIEWER(DPO) / AUDITOR: ใช้ scope ตาม role ของแต่ละ endpoint
   let whereClause = {};
-  if (user.role === 'DEPARTMENT_USER' && user.departmentId) {
-    whereClause = { departmentId: user.departmentId };
+  if (user.role === 'DEPARTMENT_USER') {
+    whereClause = { createdById: user.id };
+  } else if (user.role === 'AUDITOR') {
+    whereClause = { status: { in: ['APPROVED', 'COMPLETE'] } };
   }
 
   const [totalRopa, byStatus, recentRopas, sensitiveByDepartment] = await Promise.all([
@@ -57,14 +59,16 @@ const getSummary = async (req) => {
     : [];
   const deptNameById = Object.fromEntries(departments.map((d) => [d.id, d.name]));
 
-  // Format สำหรับ Frontend
+  // ส่งแยกตาม Prisma — ฝั่ง frontend รวม APPROVED + COMPLETE เป็น "อนุมัติแล้ว"
+  // (ห้ามใช้ || รวมกัน จะนับพลาดเมื่อมีทั้ง COMPLETE กับ APPROVED)
   return {
     totalRopa,
     byStatus: {
       DRAFT: statusSummary.DRAFT || 0,
-      PENDING: statusSummary.PENDING || statusSummary.SUBMITTED || 0,
-      NEEDS_FIX: statusSummary.NEEDS_FIX || statusSummary.REJECTED || 0,
-      COMPLETE: statusSummary.COMPLETE || statusSummary.APPROVED || 0
+      PENDING: (statusSummary.PENDING || 0) + (statusSummary.SUBMITTED || 0),
+      NEEDS_FIX: (statusSummary.NEEDS_FIX || 0) + (statusSummary.REJECTED || 0),
+      APPROVED: statusSummary.APPROVED || 0,
+      COMPLETE: statusSummary.COMPLETE || 0
     },
     recentActivities: recentRopas.map(r => ({
       id: r.id,

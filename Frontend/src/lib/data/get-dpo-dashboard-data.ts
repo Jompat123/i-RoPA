@@ -104,6 +104,7 @@ function fromRows(rows: ApiRopa[], source: "api" | "mock"): DpoDashboardData {
       department: row.department?.name || "Unknown",
       submittedAtLabel: thaiDate(row.updatedAt || ""),
       ownerName: row.createdBy?.name || "-",
+      updatedAt: row.updatedAt || "",
       status,
       legalBasis: row.legalBasis || "",
       dataType: String(row.dataType || "").trim().toUpperCase(),
@@ -118,6 +119,20 @@ function fromRows(rows: ApiRopa[], source: "api" | "mock"): DpoDashboardData {
     .sort((a, b) => new Date(b.destroyedAt || 0).getTime() - new Date(a.destroyedAt || 0).getTime())
     .slice(0, 10)
     .map((row) => `ทำลายข้อมูลแล้ว: ${row.processName} (${row.department}) • ${thaiDateTime(row.destroyedAt || "")}`);
+
+  const recentActionLogs = normalized
+    .slice()
+    .sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())
+    .slice(0, 10)
+    .map((row) => {
+      const action =
+        row.status === "approved"
+          ? "อนุมัติแล้ว"
+          : row.status === "needs_fix"
+            ? "ส่งกลับแก้ไข"
+            : "รอตรวจสอบ";
+      return `${action}: ${row.processName} (${row.department}) • ${thaiDateTime(row.updatedAt || "")}`;
+    });
 
   const departmentStatus = [...new Set(normalized.map((x) => x.department))]
     .map((department) => {
@@ -172,7 +187,12 @@ function fromRows(rows: ApiRopa[], source: "api" | "mock"): DpoDashboardData {
       ownerName: row.ownerName,
       status: row.status,
     })),
-    recentLogs: destructionLogs.length > 0 ? destructionLogs : source === "mock" ? dpoDashboardMock.recentLogs : [],
+    recentLogs:
+      [...recentActionLogs, ...destructionLogs].slice(0, 12).filter(Boolean).length > 0
+        ? [...recentActionLogs, ...destructionLogs].slice(0, 12).filter(Boolean)
+        : source === "mock"
+          ? dpoDashboardMock.recentLogs
+          : [],
   };
 }
 

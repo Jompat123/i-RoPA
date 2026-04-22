@@ -84,6 +84,7 @@ type RopaWizardState = {
   storageMethod: string;
   retentionOption: RetentionOption;
   retentionPeriodOther: string;
+  rightsAccessNote: string;
   deletionMethod: string;
   rightsRefusalNote: string;
   securityMeasure: SecurityMeasure;
@@ -154,9 +155,18 @@ type ApiRopaDetail = {
   transferCountry?: string | null;
   transferMethod?: string | null;
   protectionStandard?: string | null;
+  legalExemption28?: string | null;
   storageMethod?: string | null;
+  storageDataType?: string | null;
+  rightsAccessNote?: string | null;
   retentionPeriod?: string | null;
   deletionMethod?: string | null;
+  disclosureNote?: string | null;
+  transferToAffiliate?: boolean | null;
+  minorConsentUnder10?: boolean | null;
+  minorConsent10to20?: boolean | null;
+  securityAccessControl?: string | null;
+  securityUserResponsibility?: string | null;
   securityTech?: string | null;
   securityPhysical?: string | null;
   securityOrg?: string | null;
@@ -201,6 +211,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
     storageMethod: "",
     retentionOption: null,
     retentionPeriodOther: "",
+    rightsAccessNote: "",
     deletionMethod: "",
     rightsRefusalNote: "",
     securityMeasure: "technical",
@@ -308,12 +319,31 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
           transferCountry: payload.transferCountry?.trim() || "",
           transferMethod: payload.transferMethod?.trim() || "",
           protectionStandard: payload.protectionStandard?.trim() || "",
+          legalBasisNote: payload.legalExemption28?.trim() || prev.legalBasisNote,
           storageMethod: payload.storageMethod?.trim() || "",
+          storageType:
+            String(payload.storageDataType || "").toLowerCase() === "hard"
+              ? "hard"
+              : String(payload.storageDataType || "").toLowerCase() === "soft"
+                ? "soft"
+                : prev.storageType,
+          rightsAccessNote: payload.rightsAccessNote?.trim() || prev.rightsAccessNote,
           retentionOption: retention.option,
           retentionPeriodOther: retention.customYears,
           deletionMethod: payload.deletionMethod?.trim() || "",
+          disclosureNote: payload.disclosureNote?.trim() || prev.disclosureNote,
+          transferToAffiliate: payload.transferToAffiliate ?? prev.transferToAffiliate,
+          minorConsentEnabled:
+            Boolean(payload.minorConsentUnder10) || Boolean(payload.minorConsent10to20),
+          minorAgeOption: payload.minorConsentUnder10
+            ? "under10"
+            : payload.minorConsent10to20
+              ? "10to20"
+              : prev.minorAgeOption,
           securityMeasure,
           securityMeasureNote:
+            payload.securityAccessControl?.trim() ||
+            payload.securityUserResponsibility?.trim() ||
             payload.securityTech?.trim() ||
             payload.securityPhysical?.trim() ||
             payload.securityOrg?.trim() ||
@@ -464,11 +494,26 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
           dataSource: state.entityName || null,
           dataControllerAddress: state.role === "processor" ? state.controllerInfoAddress || null : null,
           legalBasis: state.legalBasis.join(","),
+          legalExemption28: state.legalBasisNote || null,
+          minorConsentUnder10: state.minorConsentEnabled && state.minorAgeOption === "under10",
+          minorConsent10to20: state.minorConsentEnabled && state.minorAgeOption === "10to20",
           crossBorderTransfer: state.crossBorderTransfer,
           transferCountry: state.transferCountry || null,
+          transferToAffiliate: state.transferToAffiliate,
+          transferMethod: state.transferMethod || null,
+          protectionStandard: state.protectionStandard || null,
+          storageDataType: state.storageType.toUpperCase(),
+          rightsAccessNote: state.rightsAccessNote || null,
           retentionPeriod: retentionPeriodLabel() || null,
           storageMethod: state.storageMethod || null,
           deletionMethod: state.deletionMethod || null,
+          disclosureNote: state.disclosureNote || null,
+          securityAccessControl:
+            state.securityMeasure === "access_control" ? state.securityMeasureNote || "ACCESS_CONTROL" : null,
+          securityUserResponsibility:
+            state.securityMeasure === "organizational"
+              ? state.securityMeasureNote || "USER_RESPONSIBILITY"
+              : null,
           securityTech:
             state.securityMeasure === "technical" ? state.securityMeasureNote || "TECHNICAL" : null,
           securityPhysical:
@@ -518,13 +563,26 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
       dataSource: state.entityName || null,
       dataControllerAddress: state.role === "processor" ? state.controllerInfoAddress || null : null,
       legalBasis: state.legalBasis.join(","),
+      legalExemption28: state.legalBasisNote || null,
+      minorConsentUnder10: state.minorConsentEnabled && state.minorAgeOption === "under10",
+      minorConsent10to20: state.minorConsentEnabled && state.minorAgeOption === "10to20",
       crossBorderTransfer: state.crossBorderTransfer,
       transferCountry: state.transferCountry || null,
+      transferToAffiliate: state.transferToAffiliate,
       transferMethod: state.transferMethod || null,
       protectionStandard: state.protectionStandard || null,
+      storageDataType: state.storageType.toUpperCase(),
       retentionPeriod: retentionPeriodLabel() || null,
       storageMethod: state.storageMethod || null,
+      rightsAccessNote: state.rightsAccessNote || null,
       deletionMethod: state.deletionMethod || null,
+      disclosureNote: state.disclosureNote || null,
+      securityAccessControl:
+        state.securityMeasure === "access_control" ? state.securityMeasureNote || "ACCESS_CONTROL" : null,
+      securityUserResponsibility:
+        state.securityMeasure === "organizational"
+          ? state.securityMeasureNote || "USER_RESPONSIBILITY"
+          : null,
       securityTech:
         state.securityMeasure === "technical" ? state.securityMeasureNote || "TECHNICAL" : null,
       // Keep both fields populated for downstream DPO review/export consistency.
@@ -943,6 +1001,12 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
                     </label>
                   </div>
 
+                  {state.minorConsentEnabled ? (
+                    <p className="text-xs text-slate-500">
+                      เลือกช่วงอายุอย่างใดอย่างหนึ่งด้านล่าง — ตาราง/เอกสารส่งออกจะแสดงเครื่องหมาย ✓ ที่คอลัมน์ &quot;ไม่เกิน 10 ปี&quot; หรือ
+                      &quot;10–20 ปี&quot; ตามที่เลือก (ตัวเลือก &quot;อื่นๆ&quot; ไม่มีช่อง ✓ ในตารางมาตรฐาน)
+                    </p>
+                  ) : null}
                   <div className={`grid grid-cols-1 gap-3 sm:grid-cols-3 ${state.minorConsentEnabled ? "" : "opacity-50"}`}>
                     {(
                       [
@@ -1311,6 +1375,18 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
                           />
                         </div>
                       ) : null}
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs font-semibold text-slate-600">
+                        สิทธิและวิธีการเข้าถึงข้อมูลส่วนบุคคล
+                      </label>
+                      <input
+                        type="text"
+                        value={state.rightsAccessNote}
+                        onChange={(e) => update("rightsAccessNote", e.target.value)}
+                        placeholder="ระบุเงื่อนไขและวิธีการใช้สิทธิ"
+                        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      />
                     </div>
                     <div className="flex flex-col gap-2">
                       <label className="text-xs font-semibold text-slate-600">

@@ -120,27 +120,32 @@ function fromMockEntry(row: MockRopaEntry): DpoRecordRow {
     collectionMethodType: collection.method,
     collectionSource: collection.source,
     legalBasis: row.legalBasis || "-",
-    minorConsentUnder10: null,
-    minorConsent10to20: null,
+    minorConsentUnder10: row.minorConsentUnder10 ?? null,
+    minorConsent10to20: row.minorConsent10to20 ?? null,
     crossBorderTransfer: row.crossBorderTransfer ?? null,
     transferCountry: row.transferCountry ?? null,
-    transferToAffiliate: null,
+    transferToAffiliate: row.transferToAffiliate ?? null,
     transferMethod: row.transferMethod ?? null,
     protectionStandard: row.protectionStandard ?? null,
-    legalExemption28: null,
-    storageDataType: null,
+    legalExemption28: row.legalExemption28 ?? null,
+    storageDataType:
+      String(row.storageDataType || "").toLowerCase() === "hard"
+        ? "hard"
+        : String(row.storageDataType || "").toLowerCase() === "soft"
+          ? "soft"
+          : null,
     storageMethod: row.storageMethod ?? null,
     retentionPeriod: row.retentionPeriod || "-",
-    rightsAccessNote: null,
+    rightsAccessNote: row.rightsAccessNote ?? null,
     deletionMethod: row.deletionMethod ?? null,
-    disclosureNote: null,
+    disclosureNote: row.disclosureNote ?? null,
     rightsRefusalNote: role === "processor" ? null : row.rightsRefusalNote ?? null,
     securityMeasuresSummary: buildSecuritySummary(role, row.securityTech, row.securityPhysical, row.securityOrg),
     securityOrg: row.securityOrg ?? null,
     securityTech: row.securityTech ?? null,
     securityPhysical: row.securityPhysical ?? null,
-    securityAccessControl: null,
-    securityUserResponsibility: null,
+    securityAccessControl: row.securityAccessControl ?? null,
+    securityUserResponsibility: row.securityUserResponsibility ?? null,
     securityAudit: null,
   };
 }

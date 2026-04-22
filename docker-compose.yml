@@ -1,0 +1,25 @@
+# PostgreSQL สำหรับ dev (รันคู่กับ Backend + Frontend)
+# ใช้: docker compose up -d
+#
+# ค่า user/password ด้านล่างให้ตรงกับ DATABASE_URL ใน Backend/.env
+# (เทมเพลตในโปรเจกต์นี้ใช้ postgres/postgres แบบเดียวกับ Backend/.env.example)
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: iropa
+    ports:
+      - "5432:5432"
+    volumes:
+      - iropa_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d iropa"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  iropa_pgdata:

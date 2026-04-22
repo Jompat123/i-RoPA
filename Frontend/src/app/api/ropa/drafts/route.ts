@@ -6,42 +6,59 @@ import { extractErrorMessage, sanitizeRopaPayload } from "@/lib/contracts/backen
 import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/data/runtime";
 import { createMockRopa } from "@/lib/data/mock-ropa-store";
 
-type DraftPayload = {
-  ropaRole?: "controller" | "processor";
-  role?: "controller" | "processor";
-  processName: string;
-  purpose?: string | null;
-  personalDataTypes?: string[];
-  dataCategory?: string | null;
-  dataType?: "GENERAL" | "SENSITIVE";
-  collectionMethod?: string | null;
-  dataSource?: string | null;
-  dataControllerAddress?: string | null;
-  legalBasis?: string | null;
-  crossBorderTransfer?: boolean;
-  transferCountry?: string | null;
-  retentionPeriod?: string | null;
-  storageMethod?: string | null;
-  deletionMethod?: string | null;
-  securityTech?: string | null;
-  securityPhysical?: string | null;
-  securityOrg?: string | null;
-  status?: "DRAFT" | "PENDING" | "NEEDS_FIX" | "COMPLETE" | "APPROVED";
-};
+function buildCreatePayloadFromSanitized(
+  safe: Record<string, unknown>,
+  ropaRole: "controller" | "processor",
+): Parameters<typeof createMockRopa>[0] {
+  return {
+    processName: String(safe.processName ?? "").trim() || "แบบฟอร์มที่ยังไม่ระบุชื่อกิจกรรม",
+    ropaRole,
+    status: (safe.status as string) || "DRAFT",
+    purpose: (safe.purpose as string) ?? null,
+    personalDataTypes: (safe.personalDataTypes as string[]) ?? [],
+    dataCategory: (safe.dataCategory as string) ?? null,
+    dataType: (safe.dataType as string) ?? "GENERAL",
+    collectionMethod: (safe.collectionMethod as string) ?? null,
+    dataSource: (safe.dataSource as string) ?? null,
+    dataControllerAddress: (safe.dataControllerAddress as string) ?? null,
+    legalBasis: (safe.legalBasis as string) ?? null,
+    legalExemption28: (safe.legalExemption28 as string) ?? null,
+    minorConsentUnder10: safe.minorConsentUnder10 === true,
+    minorConsent10to20: safe.minorConsent10to20 === true,
+    crossBorderTransfer: (safe.crossBorderTransfer as boolean) ?? false,
+    transferCountry: (safe.transferCountry as string) ?? null,
+    transferToAffiliate: (safe.transferToAffiliate as boolean) ?? false,
+    transferMethod: (safe.transferMethod as string) ?? null,
+    protectionStandard: (safe.protectionStandard as string) ?? null,
+    storageDataType: (safe.storageDataType as string) ?? null,
+    rightsAccessNote: (safe.rightsAccessNote as string) ?? null,
+    storageMethod: (safe.storageMethod as string) ?? null,
+    deletionMethod: (safe.deletionMethod as string) ?? null,
+    disclosureNote: (safe.disclosureNote as string) ?? null,
+    rightsRefusalNote: (safe.rightsRefusalNote as string) ?? null,
+    securityTech: (safe.securityTech as string) ?? null,
+    securityPhysical: (safe.securityPhysical as string) ?? null,
+    securityOrg: (safe.securityOrg as string) ?? null,
+    securityAccessControl: (safe.securityAccessControl as string) ?? null,
+    securityUserResponsibility: (safe.securityUserResponsibility as string) ?? null,
+    retentionPeriod: (safe.retentionPeriod as string) ?? null,
+    reviewNote: (safe.reviewNote as string) ?? null,
+    reviewChecks: (safe.reviewChecks as unknown[]) ?? [],
+  };
+}
 
 export async function POST(request: Request) {
   const denied = await requireApiRole(["DATA_OWNER"]);
   if (denied) return denied;
 
-  const body = (await request.json()) as DraftPayload;
-  const ropaRole = body.role ?? body.ropaRole ?? "controller";
-
-  if (!body.processName || !body.processName.trim()) {
+  const raw = (await request.json()) as Record<string, unknown>;
+  const processName = typeof raw.processName === "string" ? raw.processName.trim() : "";
+  if (!processName) {
     return NextResponse.json({ error: "processName is required" }, { status: 400 });
   }
   if (
-    body.status === "PENDING" &&
-    (!body.securityPhysical?.trim() || !body.securityOrg?.trim())
+    raw.status === "PENDING" &&
+    (!String(raw.securityPhysical ?? "").trim() || !String(raw.securityOrg ?? "").trim())
   ) {
     return NextResponse.json(
       { error: "securityPhysical and securityOrg are required before submit" },
@@ -49,28 +66,13 @@ export async function POST(request: Request) {
     );
   }
 
+  const ropaRole: "controller" | "processor" =
+    raw.role === "processor" || raw.ropaRole === "processor" ? "processor" : "controller";
+  const merged: Record<string, unknown> = { ...raw, processName, role: ropaRole };
+  const safe = sanitizeRopaPayload(merged);
+
   if (shouldUseMockData()) {
-    const created = createMockRopa({
-      processName: body.processName.trim(),
-      purpose: body.purpose ?? null,
-      personalDataTypes: body.personalDataTypes ?? [],
-      dataCategory: body.dataCategory ?? null,
-      dataType: body.dataType ?? "GENERAL",
-      collectionMethod: body.collectionMethod ?? null,
-      dataSource: body.dataSource ?? null,
-      dataControllerAddress: body.dataControllerAddress ?? null,
-      ropaRole,
-      legalBasis: body.legalBasis ?? null,
-      crossBorderTransfer: body.crossBorderTransfer ?? false,
-      transferCountry: body.transferCountry ?? null,
-      retentionPeriod: body.retentionPeriod ?? null,
-      storageMethod: body.storageMethod ?? null,
-      deletionMethod: body.deletionMethod ?? null,
-      securityTech: body.securityTech ?? null,
-      securityPhysical: body.securityPhysical ?? null,
-      securityOrg: body.securityOrg ?? null,
-      status: body.status ?? "DRAFT",
-    });
+    const created = createMockRopa(buildCreatePayloadFromSanitized(safe, ropaRole));
     return NextResponse.json(
       {
         id: created.id,
@@ -99,27 +101,7 @@ export async function POST(request: Request) {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(sanitizeRopaPayload({
-        processName: body.processName.trim(),
-        role: ropaRole,
-        purpose: body.purpose ?? null,
-        personalDataTypes: body.personalDataTypes ?? [],
-        dataCategory: body.dataCategory ?? null,
-        dataType: body.dataType ?? "GENERAL",
-        collectionMethod: body.collectionMethod ?? null,
-        dataSource: body.dataSource ?? null,
-        dataControllerAddress: body.dataControllerAddress ?? null,
-        legalBasis: body.legalBasis ?? null,
-        crossBorderTransfer: body.crossBorderTransfer ?? false,
-        transferCountry: body.transferCountry ?? null,
-        retentionPeriod: body.retentionPeriod ?? null,
-        storageMethod: body.storageMethod ?? null,
-        deletionMethod: body.deletionMethod ?? null,
-        securityTech: body.securityTech ?? null,
-        securityPhysical: body.securityPhysical ?? null,
-        securityOrg: body.securityOrg ?? null,
-        status: body.status ?? "DRAFT",
-      })),
+      body: JSON.stringify(safe),
     });
 
     const payload = await res.json().catch(() => ({}));

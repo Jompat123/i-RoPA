@@ -24,11 +24,20 @@ export type MockRopaEntry = {
   crossBorderTransfer?: boolean | null;
   transferMethod?: string | null;
   protectionStandard?: string | null;
+  legalExemption28?: string | null;
+  transferToAffiliate?: boolean | null;
+  minorConsentUnder10?: boolean | null;
+  minorConsent10to20?: boolean | null;
+  storageDataType?: string | null;
+  rightsAccessNote?: string | null;
+  disclosureNote?: string | null;
   storageMethod?: string | null;
   deletionMethod?: string | null;
   securityTech?: string | null;
   securityPhysical?: string | null;
   securityOrg?: string | null;
+  securityAccessControl?: string | null;
+  securityUserResponsibility?: string | null;
   reviewNote?: string | null;
   reviewChecks?: unknown[];
   /** ผู้ควบคุม vs ผู้ประมวลผล (ขั้นตอนที่ 1) */
@@ -69,11 +78,20 @@ function seedRows(): MockRopaEntry[] {
       crossBorderTransfer: true,
       transferMethod: "Secure API",
       protectionStandard: "SCC",
+      legalExemption28: "",
+      transferToAffiliate: false,
+      minorConsentUnder10: false,
+      minorConsent10to20: false,
+      storageDataType: "SOFT",
+      rightsAccessNote: "",
+      disclosureNote: "",
       storageMethod: "Cloud (encrypted)",
       deletionMethod: "ลบถาวรจากระบบ",
       securityTech: "Encryption + MFA",
       securityPhysical: "Access control",
       securityOrg: "Role-based policy",
+      securityAccessControl: "Role-based access",
+      securityUserResponsibility: "Responsible user assignment",
       reviewNote: null,
       reviewChecks: [],
       ropaRole: "controller",
@@ -104,11 +122,20 @@ function seedRows(): MockRopaEntry[] {
       crossBorderTransfer: false,
       transferMethod: "",
       protectionStandard: "",
+      legalExemption28: "",
+      transferToAffiliate: false,
+      minorConsentUnder10: false,
+      minorConsent10to20: false,
+      storageDataType: "SOFT",
+      rightsAccessNote: "",
+      disclosureNote: "",
       storageMethod: "On-premise server",
       deletionMethod: "ทำลายเอกสารและ wipe disk",
       securityTech: "Audit trail",
       securityPhysical: "Restricted room",
       securityOrg: "DPO review",
+      securityAccessControl: "Restricted account",
+      securityUserResponsibility: "Assigned operator only",
       reviewNote: "กรุณาเพิ่มรายละเอียด transfer method และมาตรฐานคุ้มครอง",
       reviewChecks: [],
       ropaRole: "processor",
@@ -138,11 +165,20 @@ function seedRows(): MockRopaEntry[] {
       crossBorderTransfer: false,
       transferMethod: "",
       protectionStandard: "",
+      legalExemption28: "",
+      transferToAffiliate: false,
+      minorConsentUnder10: false,
+      minorConsent10to20: false,
+      storageDataType: "HARD",
+      rightsAccessNote: "",
+      disclosureNote: "",
       storageMethod: "ตู้เอกสารล็อกกุญแจ",
       deletionMethod: "เครื่องทำลายเอกสาร",
       securityTech: "Access logs",
       securityPhysical: "Locked cabinet",
       securityOrg: "Retention policy",
+      securityAccessControl: "Badge access",
+      securityUserResponsibility: "Document custodian",
       reviewNote: null,
       reviewChecks: [],
       ropaRole: "controller",
@@ -196,11 +232,20 @@ export function createMockRopa(payload: Partial<MockRopaEntry>): MockRopaEntry {
     crossBorderTransfer: payload.crossBorderTransfer ?? false,
     transferMethod: payload.transferMethod ?? null,
     protectionStandard: payload.protectionStandard ?? null,
+    legalExemption28: payload.legalExemption28 ?? null,
+    transferToAffiliate: payload.transferToAffiliate ?? false,
+    minorConsentUnder10: payload.minorConsentUnder10 ?? false,
+    minorConsent10to20: payload.minorConsent10to20 ?? false,
+    storageDataType: payload.storageDataType ?? null,
+    rightsAccessNote: payload.rightsAccessNote ?? null,
+    disclosureNote: payload.disclosureNote ?? null,
     storageMethod: payload.storageMethod ?? null,
     deletionMethod: payload.deletionMethod ?? null,
     securityTech: payload.securityTech ?? null,
     securityPhysical: payload.securityPhysical ?? null,
     securityOrg: payload.securityOrg ?? null,
+    securityAccessControl: payload.securityAccessControl ?? null,
+    securityUserResponsibility: payload.securityUserResponsibility ?? null,
     reviewNote: payload.reviewNote ?? null,
     reviewChecks: payload.reviewChecks ?? [],
     ropaRole: payload.ropaRole ?? "controller",
