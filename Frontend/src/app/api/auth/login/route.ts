@@ -16,6 +16,7 @@ type LoginBody = {
 };
 
 type MockAccount = {
+  id: string;
   password: string;
   name: string;
   roleLabel: string;
@@ -25,18 +26,21 @@ type MockAccount = {
 /** บัญชีทดสอบเมื่อไม่มี backend หรือเปิด mock */
 const MOCK_ACCOUNTS: Record<string, MockAccount> = {
   "admin@i-ropa.local": {
+    id: "mock-admin",
     password: "password123",
     name: "ผู้ดูแลระบบ",
     roleLabel: "Admin",
     role: "ADMIN",
   },
   "dpo@i-ropa.local": {
+    id: "mock-dpo",
     password: "password123",
     name: "เจ้าหน้าที่ DPO",
     roleLabel: "DPO",
     role: "DPO",
   },
   "owner@i-ropa.local": {
+    id: "mock-owner",
     password: "password123",
     name: "เจ้าของข้อมูล",
     roleLabel: "Data Owner",
@@ -51,7 +55,7 @@ function safeEmail(value: string): string {
 function applySessionCookies(
   res: NextResponse,
   token: string,
-  user: { name: string; roleLabel: string; role: AppRole; avatarUrl?: string | null },
+  user: { id?: string; name: string; roleLabel: string; role: AppRole; avatarUrl?: string | null },
 ) {
   const base = cookieBaseOptions();
   res.cookies.set(AUTH_TOKEN, token, { ...base, httpOnly: true });
@@ -122,6 +126,7 @@ export async function POST(request: Request) {
 
       const out = NextResponse.json({ ok: true });
       applySessionCookies(out, token, {
+        id: typeof rawUser.id === "string" ? rawUser.id : undefined,
         name,
         roleLabel,
         role,
@@ -140,6 +145,7 @@ export async function POST(request: Request) {
 
   const out = NextResponse.json({ ok: true });
   applySessionCookies(out, crypto.randomUUID(), {
+    id: account.id,
     name: account.name,
     roleLabel: account.roleLabel,
     role: account.role,

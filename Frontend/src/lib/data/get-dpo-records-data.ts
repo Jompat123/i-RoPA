@@ -18,6 +18,20 @@ type ApiRopa = {
   purpose?: string | null;
   ropaRole?: string | null;
   dataControllerRole?: string | null;
+  dataSource?: string | null;
+  dataControllerAddress?: string | null;
+  personalDataTypes?: string[] | string | null;
+  dataCategory?: string | null;
+  collectionMethod?: string | null;
+  crossBorderTransfer?: boolean | null;
+  transferCountry?: string | null;
+  transferToAffiliate?: boolean | null;
+  transferMethod?: string | null;
+  protectionStandard?: string | null;
+  legalExemption28?: string | null;
+  storageMethod?: string | null;
+  deletionMethod?: string | null;
+  disclosureNote?: string | null;
   rightsRefusalNote?: string | null;
   securityTech?: string | null;
   securityPhysical?: string | null;
@@ -49,33 +63,105 @@ function buildSecuritySummary(
   return parts.length ? parts.join(" | ") : null;
 }
 
+function parseCollectionMethod(raw: unknown): {
+  source: "direct" | "other" | null;
+  method: "soft" | "hard" | null;
+} {
+  const value = String(raw ?? "").trim().toUpperCase();
+  if (!value) return { source: null, method: null };
+
+  const parts = value.split("|").map((x) => x.trim()).filter(Boolean);
+  const source = parts.find((x) => x === "DIRECT" || x === "OTHER") ?? value;
+  const method = parts.find((x) => x === "SOFT" || x === "HARD") ?? value;
+  return {
+    source: source === "DIRECT" ? "direct" : source === "OTHER" ? "other" : null,
+    method: method === "SOFT" ? "soft" : method === "HARD" ? "hard" : null,
+  };
+}
+
+function parsePersonalDataTypes(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.map((x) => String(x).trim()).filter(Boolean);
+  return String(raw ?? "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
 function fromMockEntry(row: MockRopaEntry): DpoRecordRow {
   const role: RopaEntityRole = row.ropaRole === "processor" ? "processor" : "controller";
+  const collection = parseCollectionMethod(row.collectionMethod);
   return {
     id: row.id,
     role,
     processName: row.processName || "-",
     department: row.department?.name || "Unknown",
     purpose: row.purpose || "-",
+    dataSourceName: role === "controller" ? row.dataSource ?? null : null,
+    processorName: role === "processor" ? row.dataSource ?? null : null,
+    controllerAddress: row.dataControllerAddress ?? null,
+    personalDataTypes: parsePersonalDataTypes(row.personalDataTypes),
+    dataCategory: row.dataCategory ?? null,
     dataType: row.dataType || "-",
+    collectionMethodType: collection.method,
+    collectionSource: collection.source,
     legalBasis: row.legalBasis || "-",
+    minorConsentUnder10: null,
+    minorConsent10to20: null,
+    crossBorderTransfer: row.crossBorderTransfer ?? null,
+    transferCountry: row.transferCountry ?? null,
+    transferToAffiliate: null,
+    transferMethod: row.transferMethod ?? null,
+    protectionStandard: row.protectionStandard ?? null,
+    legalExemption28: null,
+    storageDataType: null,
+    storageMethod: row.storageMethod ?? null,
     retentionPeriod: row.retentionPeriod || "-",
+    rightsAccessNote: null,
+    deletionMethod: row.deletionMethod ?? null,
+    disclosureNote: null,
     rightsRefusalNote: role === "processor" ? null : row.rightsRefusalNote ?? null,
     securityMeasuresSummary: buildSecuritySummary(role, row.securityTech, row.securityPhysical, row.securityOrg),
+    securityOrg: row.securityOrg ?? null,
+    securityTech: row.securityTech ?? null,
+    securityPhysical: row.securityPhysical ?? null,
+    securityAccessControl: null,
+    securityUserResponsibility: null,
+    securityAudit: null,
   };
 }
 
 function fromApiEntry(row: ApiRopa): DpoRecordRow {
   const role = parseApiRole(row.ropaRole ?? row.dataControllerRole);
+  const collection = parseCollectionMethod(row.collectionMethod);
   return {
     id: row.id,
     role,
     processName: row.processName || "-",
     department: row.department?.name || "Unknown",
     purpose: row.purpose || "-",
+    dataSourceName: role === "controller" ? row.dataSource ?? null : null,
+    processorName: role === "processor" ? row.dataSource ?? null : null,
+    controllerAddress: row.dataControllerAddress ?? null,
+    personalDataTypes: parsePersonalDataTypes(row.personalDataTypes),
+    dataCategory: row.dataCategory ?? null,
     dataType: row.dataType || "-",
+    collectionMethodType: collection.method,
+    collectionSource: collection.source,
     legalBasis: row.legalBasis || "-",
+    minorConsentUnder10: null,
+    minorConsent10to20: null,
+    crossBorderTransfer: row.crossBorderTransfer ?? null,
+    transferCountry: row.transferCountry ?? null,
+    transferToAffiliate: row.transferToAffiliate ?? null,
+    transferMethod: row.transferMethod ?? null,
+    protectionStandard: row.protectionStandard ?? null,
+    legalExemption28: row.legalExemption28 ?? null,
+    storageDataType: null,
+    storageMethod: row.storageMethod ?? null,
     retentionPeriod: row.retentionPeriod || "-",
+    rightsAccessNote: null,
+    deletionMethod: row.deletionMethod ?? null,
+    disclosureNote: row.disclosureNote ?? null,
     rightsRefusalNote: role === "processor" ? null : row.rightsRefusalNote ?? null,
     securityMeasuresSummary: buildSecuritySummary(
       role,
@@ -83,6 +169,12 @@ function fromApiEntry(row: ApiRopa): DpoRecordRow {
       row.securityPhysical,
       row.securityOrg,
     ),
+    securityOrg: row.securityOrg ?? null,
+    securityTech: row.securityTech ?? null,
+    securityPhysical: row.securityPhysical ?? null,
+    securityAccessControl: null,
+    securityUserResponsibility: null,
+    securityAudit: null,
   };
 }
 

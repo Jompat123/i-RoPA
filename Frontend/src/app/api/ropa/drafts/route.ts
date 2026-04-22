@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { apiPathRopaList } from "@/config/api-endpoints";
+import { requireApiRole } from "@/lib/auth/require-api-role";
 import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/data/runtime";
 import { createMockRopa } from "@/lib/data/mock-ropa-store";
 
@@ -27,6 +28,9 @@ type DraftPayload = {
 };
 
 export async function POST(request: Request) {
+  const denied = await requireApiRole(["DATA_OWNER"]);
+  if (denied) return denied;
+
   const body = (await request.json()) as DraftPayload;
 
   if (!body.processName || !body.processName.trim()) {

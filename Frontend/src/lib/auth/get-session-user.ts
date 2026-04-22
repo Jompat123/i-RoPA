@@ -40,6 +40,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
                 ? "DPO"
                 : "DATA_OWNER";
     return {
+      id: typeof parsed.id === "string" ? parsed.id : undefined,
       name: parsed.name,
       roleLabel: parsed.roleLabel,
       role: normalizedRole,

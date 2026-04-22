@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { apiPathRopaItem } from "@/config/api-endpoints";
+import { requireApiRole } from "@/lib/auth/require-api-role";
 import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/data/runtime";
 import { updateMockRopa } from "@/lib/data/mock-ropa-store";
 
@@ -13,6 +14,9 @@ type Payload = {
 };
 
 export async function PATCH(request: Request, context: Ctx) {
+  const denied = await requireApiRole(["DPO"]);
+  if (denied) return denied;
+
   const { id } = await context.params;
   const body = (await request.json()) as Payload;
 

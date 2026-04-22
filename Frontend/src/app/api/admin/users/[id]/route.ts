@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { apiPathUserItem } from "@/config/api-endpoints";
+import { requireApiRole } from "@/lib/auth/require-api-role";
 import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/data/runtime";
 
 type UpdateUserPayload = {
@@ -14,6 +15,9 @@ type UpdateUserPayload = {
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: Ctx) {
+  const denied = await requireApiRole(["ADMIN"]);
+  if (denied) return denied;
+
   const { id } = await context.params;
   const body = (await request.json()) as UpdateUserPayload;
 

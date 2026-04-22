@@ -15,6 +15,7 @@ export function cookieBaseOptions() {
 }
 
 export function buildUserCookieValue(payload: {
+  id?: string;
   name: string;
   roleLabel: string;
   role: AppRole;

@@ -25,6 +25,10 @@ export function apiPathUserItem(id: string): string {
   return `${apiPathUsers()}/${encodeURIComponent(id)}`;
 }
 
+export function apiPathDepartments(): string {
+  return envPath("NEXT_PUBLIC_API_DEPARTMENTS_PATH", "/api/departments");
+}
+
 /** Data Owner — การ์ดสรุปหน้าแรก */
 export function apiPathDataOwnerDashboardSummary(): string {
   return envPath("NEXT_PUBLIC_API_DATA_OWNER_DASHBOARD_SUMMARY_PATH", "/api/dashboard/summary");

@@ -7,8 +7,14 @@ export type AdminUserRow = {
   name: string;
   email: string;
   role: AdminUserRole;
+  departmentId?: string | null;
   department: string;
   status: AdminUserStatus;
+};
+
+export type AdminDepartmentOption = {
+  id: string;
+  name: string;
 };
 
 export type AdminDashboardData = {
@@ -33,4 +39,5 @@ export type AdminUserManagementData = {
     department: string;
   };
   departments: string[];
+  departmentOptions: AdminDepartmentOption[];
 };

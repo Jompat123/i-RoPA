@@ -5,6 +5,7 @@ export type AppRole = "ADMIN" | "DATA_OWNER" | "DPO";
  * ตั้งค่า cookie `iropa_user` (JSON) จาก route ล็อกอิน หรือจาก API หลัง verify token
  */
 export type SessionUser = {
+  id?: string;
   name: string;
   /** ข้อความบทบาทที่แสดง เช่น Data Owner, Admin */
   roleLabel: string;

@@ -50,10 +50,6 @@ const create = async (req) => {
 const update = async (req, id) => {
   const oldData = await prisma.user.findUnique({ where: { id } });
 
-  if (req.user.role !== 'ADMIN' && req.user.id !== id) {
-    throw new Error('Forbidden');
-  }
-
   const { name, email, role, departmentId, password } = req.body;
   const data = { name, email, role, departmentId };
 

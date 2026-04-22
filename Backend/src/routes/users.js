@@ -4,7 +4,7 @@ const { getAll, getOne, create, update, remove } = require('../controllers/users
 const { authenticate } = require('../middleware/auth.middleware');
 const { authorize } = require('../middleware/role.middleware');
 
-router.get('/', authenticate, async (req, res) => {
+router.get('/', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
     const result = await getAll(req);
     res.json(result);
@@ -13,7 +13,7 @@ router.get('/', authenticate, async (req, res) => {
   }
 });
 
-router.get('/:id', authenticate, async (req, res) => {
+router.get('/:id', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
     const result = await getOne(req.params.id);
     if (!result) return res.status(404).json({ error: 'Not found' });
@@ -32,7 +32,7 @@ router.post('/', authenticate, authorize('ADMIN'), async (req, res) => {
   }
 });
 
-router.put('/:id', authenticate, async (req, res) => {
+router.put('/:id', authenticate, authorize('ADMIN'), async (req, res) => {
   try {
     const result = await update(req, req.params.id);
     res.json(result);

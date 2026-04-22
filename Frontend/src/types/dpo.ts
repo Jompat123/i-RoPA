@@ -87,13 +87,39 @@ export type DpoRecordRow = {
   processName: string;
   department: string;
   purpose: string;
+  dataSourceName: string | null;
+  processorName: string | null;
+  controllerAddress: string | null;
+  personalDataTypes: string[];
+  dataCategory: string | null;
   dataType: string;
+  collectionMethodType: "soft" | "hard" | null;
+  collectionSource: "direct" | "other" | null;
   legalBasis: string;
+  minorConsentUnder10: boolean | null;
+  minorConsent10to20: boolean | null;
+  crossBorderTransfer: boolean | null;
+  transferCountry: string | null;
+  transferToAffiliate: boolean | null;
+  transferMethod: string | null;
+  protectionStandard: string | null;
+  legalExemption28: string | null;
+  storageDataType: "soft" | "hard" | null;
+  storageMethod: string | null;
   retentionPeriod: string;
+  rightsAccessNote: string | null;
+  deletionMethod: string | null;
+  disclosureNote: string | null;
   /** ข้อ 14 — มีค่าเมื่อ role เป็น controller */
   rightsRefusalNote: string | null;
   /** ข้อ 15 — สรุปมาตรการ (controller); processor ใช้ null แล้วแสดงข้อความ N/A ใน UI */
   securityMeasuresSummary: string | null;
+  securityOrg: string | null;
+  securityTech: string | null;
+  securityPhysical: string | null;
+  securityAccessControl: string | null;
+  securityUserResponsibility: string | null;
+  securityAudit: string | null;
 };
 
 export type DpoRecordsData = {

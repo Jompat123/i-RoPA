@@ -28,7 +28,7 @@ export function AdminUserManagementPage({ data }: Props) {
     email: "",
     password: "",
     role: "DATA_OWNER" as AdminUserRole,
-    department: "",
+    departmentId: "",
   });
 
   const filtered = useMemo(() => {
@@ -76,6 +76,10 @@ export function AdminUserManagementPage({ data }: Props) {
 
   async function handleCreateUser() {
     if (!form.name.trim() || !form.email.trim() || !form.password.trim()) return;
+    if ((form.role === "DATA_OWNER" || form.role === "DPO") && !form.departmentId) {
+      window.alert("กรุณาเลือกแผนกสำหรับ Data Owner หรือ DPO");
+      return;
+    }
     const res = await fetch("/api/admin/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -84,23 +88,31 @@ export function AdminUserManagementPage({ data }: Props) {
         email: form.email.trim(),
         password: form.password,
         role: toApiRole(form.role),
-        departmentId: null,
+        departmentId: form.departmentId || null,
       }),
     });
     if (!res.ok) return;
-    const created = (await res.json()) as { id: string; name: string; email: string; role: string };
+    const selectedDepartment = data.departmentOptions.find((dep) => dep.id === form.departmentId);
+    const created = (await res.json()) as {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+      departmentId?: string | null;
+    };
     setRows((prev) => [
       {
         id: created.id,
         name: created.name,
         email: created.email,
         role: form.role,
-        department: form.department || "Unknown",
+        departmentId: created.departmentId ?? (form.departmentId || null),
+        department: selectedDepartment?.name || "Unknown",
         status: "active",
       },
       ...prev,
     ]);
-    setForm({ name: "", email: "", password: "", role: "DATA_OWNER", department: "" });
+    setForm({ name: "", email: "", password: "", role: "DATA_OWNER", departmentId: "" });
     setShowAdd(false);
   }
 
@@ -119,7 +131,7 @@ export function AdminUserManagementPage({ data }: Props) {
       </div>
 
       {showAdd ? (
-        <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-100 bg-white p-4 md:grid-cols-5">
+        <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-100 bg-white p-4 md:grid-cols-6">
           <input
             placeholder="Name"
             value={form.name}
@@ -146,6 +158,18 @@ export function AdminUserManagementPage({ data }: Props) {
             <option value="DATA_OWNER">Data Owner</option>
             <option value="DPO">DPO</option>
             <option value="ADMIN">Admin</option>
+          </select>
+          <select
+            value={form.departmentId}
+            onChange={(e) => setForm((p) => ({ ...p, departmentId: e.target.value }))}
+            className="rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          >
+            <option value="">เลือกแผนก</option>
+            {data.departmentOptions.map((dep) => (
+              <option key={dep.id} value={dep.id}>
+                {dep.name}
+              </option>
+            ))}
           </select>
           <button
             type="button"

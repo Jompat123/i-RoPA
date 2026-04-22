@@ -21,20 +21,13 @@ export function DpoDashboardHome({ data }: Props) {
       ];
   const maxCount = Math.max(1, ...byDepartment.flatMap((x) => [x.approved, x.pending, x.needsFix]));
 
-  const defaultLegal = [
-    { key: "consent", label: "Consent", count: 1 },
-    { key: "contract", label: "Contract", count: 1 },
-    { key: "legitimate_interest", label: "Legitimate Interest", count: 1 },
-    { key: "legal_obligation", label: "Legal Obligation", count: 1 },
-  ];
-  const legalDistribution = (data.legalBasisDistribution.length ? data.legalBasisDistribution : defaultLegal).map(
-    (item, index) => ({
-      ...item,
-      value: item.count,
-      color: ["#3b82f6", "#22c55e", "#0ea5e9", "#f59e0b", "#8b5cf6", "#ef4444"][index % 6],
-    }),
-  );
-  const total = legalDistribution.reduce((sum, item) => sum + item.value, 0) || 1;
+  const legalDistribution = data.legalBasisDistribution.map((item, index) => ({
+    ...item,
+    value: item.count,
+    color: ["#3b82f6", "#22c55e", "#0ea5e9", "#f59e0b", "#8b5cf6", "#ef4444"][index % 6],
+  }));
+  const totalSensitive = legalDistribution.reduce((sum, item) => sum + item.value, 0);
+  const total = totalSensitive || 1;
   const legalWithPercent = legalDistribution.map((item) => ({
     ...item,
     percent: Math.round((item.value / total) * 100),
@@ -115,15 +108,46 @@ export function DpoDashboardHome({ data }: Props) {
         </section>
 
         <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-          <h2 className="text-2xl font-semibold text-slate-800">การกระจายฐานทางกฎหมาย</h2>
+          <h2 className="text-2xl font-semibold text-slate-800">สัดส่วนข้อมูลอ่อนไหวรายแผนก</h2>
           <div className="mt-4 flex flex-wrap gap-3 text-xs text-slate-600">
-            {legalWithPercent.map((item) => (
-              <span key={item.label} className="inline-flex items-center gap-2">
-                <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-                {item.label} ({item.percent}%)
-              </span>
-            ))}
+            {legalWithPercent.length > 0 ? (
+              legalWithPercent.map((item) => (
+                <span key={item.label} className="inline-flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
+                  {item.label} ({item.percent}%)
+                </span>
+              ))
+            ) : (
+              <span>ยังไม่มีรายการข้อมูลอ่อนไหว</span>
+            )}
           </div>
+          {legalWithPercent.length > 0 ? (
+            <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-50 text-slate-600">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-semibold">แผนก</th>
+                    <th className="px-3 py-2 text-right font-semibold">จำนวนรายการ</th>
+                    <th className="px-3 py-2 text-right font-semibold">สัดส่วน</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {legalWithPercent.map((item) => (
+                    <tr key={`row-${item.key}`} className="border-t border-slate-100 text-slate-700">
+                      <td className="px-3 py-2">
+                        <span className="inline-flex items-center gap-2">
+                          <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                          {item.label}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-right">{item.value}</td>
+                      <td className="px-3 py-2 text-right">{item.percent}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
           <div className="mt-6 flex justify-center">
             <svg viewBox="0 0 200 200" className="h-64 w-64">
               <circle cx="100" cy="100" r={radius} fill="none" stroke="#e2e8f0" strokeWidth={strokeWidth} />
@@ -151,10 +175,10 @@ export function DpoDashboardHome({ data }: Props) {
               })}
               <circle cx="100" cy="100" r="42" fill="white" />
               <text x="100" y="94" textAnchor="middle" className="fill-slate-500 text-[10px]">
-                ทั้งหมด
+                รายการอ่อนไหว
               </text>
               <text x="100" y="112" textAnchor="middle" className="fill-slate-800 text-[15px] font-semibold">
-                {total}
+                {totalSensitive}
               </text>
             </svg>
           </div>

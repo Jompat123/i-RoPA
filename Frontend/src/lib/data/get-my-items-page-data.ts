@@ -1,4 +1,5 @@
 import { apiPathRopaList } from "@/config/api-endpoints";
+import { getSessionUser } from "@/lib/auth/get-session-user";
 import { listMockRopa } from "@/lib/data/mock-ropa-store";
 import type { ItemStatus, MyItemRecord, MyItemsPageData } from "@/types/records";
 import { getLiveApiSession } from "@/lib/data/api-session";
@@ -15,6 +16,7 @@ type ApiRopaEntry = {
   createdAt: string;
   referenceCode?: string;
   department?: { name?: string | null } | null;
+  createdBy?: { id?: string | null } | null;
 };
 
 function getParam(q: Query, key: string): string {
@@ -84,7 +86,7 @@ function applyFilters(rows: MyItemRecord[], q: string, status: string, departmen
   });
 }
 
-async function fetchApiRows(): Promise<MyItemRecord[] | null> {
+async function fetchApiRows(ownerId?: string): Promise<MyItemRecord[] | null> {
   const session = await getLiveApiSession();
   if (!session.ok) return null;
 
@@ -96,7 +98,10 @@ async function fetchApiRows(): Promise<MyItemRecord[] | null> {
     if (!res.ok) return null;
     const json = (await res.json()) as ApiRopaEntry[];
     if (!Array.isArray(json)) return null;
-    return normalizeFromApi(json);
+    const scopedRows = ownerId
+      ? json.filter((row) => String(row.createdBy?.id || "") === ownerId)
+      : json;
+    return normalizeFromApi(scopedRows);
   } catch {
     return null;
   }
@@ -106,6 +111,10 @@ export async function getMyItemsPageData(searchParams: Query): Promise<MyItemsPa
   const q = getParam(searchParams, "q").toLowerCase();
   const status = (getParam(searchParams, "status") || "all") as "all" | ItemStatus;
   const department = getParam(searchParams, "department");
+
+  const user = await getSessionUser();
+  const ownerId = user?.id;
+  const missingOwnerIdentity = !shouldUseMockData() && user?.role === "DATA_OWNER" && !ownerId;
 
   const mockRows = normalizeFromApi(
     listMockRopa().map((row) => ({
@@ -127,13 +136,18 @@ export async function getMyItemsPageData(searchParams: Query): Promise<MyItemsPa
     rawRows = mockRows;
     source = "mock";
   } else {
+    if (missingOwnerIdentity) {
+      rawRows = [];
+      source = "api";
+      loadError = "ไม่พบข้อมูลผู้ใช้ใน session กรุณาเข้าสู่ระบบใหม่";
+    } else {
     const session = await getLiveApiSession();
     if (!session.ok) {
       rawRows = [];
       source = "api";
       loadError = session.error;
     } else {
-      const apiRows = await fetchApiRows();
+      const apiRows = await fetchApiRows(ownerId);
       if (apiRows) {
         rawRows = apiRows;
         source = "api";
@@ -142,6 +156,7 @@ export async function getMyItemsPageData(searchParams: Query): Promise<MyItemsPa
         source = "api";
         loadError = "โหลดรายการ ROPA จากเซิร์ฟเวอร์ไม่สำเร็จ";
       }
+    }
     }
   }
 

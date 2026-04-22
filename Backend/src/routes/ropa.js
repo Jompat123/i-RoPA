@@ -15,10 +15,11 @@ router.get('/', authenticate, async (req, res) => {
 
 router.get('/:id', authenticate, async (req, res) => {
   try {
-    const result = await getOne(req.params.id);
+    const result = await getOne(req, req.params.id);
     if (!result) return res.status(404).json({ error: 'Not found' });
     res.json(result);
   } catch (err) {
+    if (err.message === 'Forbidden') return res.status(403).json({ error: err.message });
     res.status(500).json({ error: err.message });
   }
 });
@@ -32,7 +33,7 @@ router.post('/', authenticate, authorize('ADMIN', 'DEPARTMENT_USER'), async (req
   }
 });
 
-router.put('/:id', authenticate, authorize('ADMIN', 'DEPARTMENT_USER'), async (req, res) => {
+router.put('/:id', authenticate, authorize('ADMIN', 'DEPARTMENT_USER', 'VIEWER'), async (req, res) => {
   try {
     const result = await update(req, req.params.id);
     res.json(result);

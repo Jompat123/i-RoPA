@@ -572,6 +572,32 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
         : currentStep === 3
           ? "แบบฟอร์ม ROPA - ขั้นตอนที่ 3: ฐานทางกฎหมาย (Legal Basis)"
           : "แบบฟอร์ม ROPA - ขั้นตอนที่ 4: การจัดเก็บ รักษา และทำลาย (Retention & Security)";
+  const isProcessor = state.role === "processor";
+  const numberings = isProcessor
+    ? {
+        legalBasis: "11",
+        disclosure: "11",
+        crossBorder: "12",
+        crossBorderSub1: "12.1",
+        crossBorderSub2: "12.2",
+        crossBorderSub3: "12.3",
+        crossBorderSub4: "12.4",
+        retentionPolicy: "13",
+        rightsRefusal: "13",
+        security: "14",
+      }
+    : {
+        legalBasis: "10",
+        disclosure: "11",
+        crossBorder: "12",
+        crossBorderSub1: "12.1",
+        crossBorderSub2: "12.2",
+        crossBorderSub3: "12.3",
+        crossBorderSub4: "12.4",
+        retentionPolicy: "13",
+        rightsRefusal: "14",
+        security: "15",
+      };
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
@@ -712,7 +738,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
             <div className="mt-10 space-y-8">
               <section>
                 <h2 className="text-sm font-semibold text-slate-700">
-                  4. ข้อมูลส่วนบุคคลที่จัดเก็บ
+                  {isProcessor ? "5" : "4"}. ข้อมูลส่วนบุคคลที่จัดเก็บ
                 </h2>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {state.personalDataTags.map((t) => (
@@ -757,7 +783,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
 
               <section>
                 <h2 className="text-sm font-semibold text-slate-700">
-                  5. หมวดหมู่ของข้อมูล
+                  {isProcessor ? "6" : "5"}. หมวดหมู่ของข้อมูล
                 </h2>
                 <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
                   {(
@@ -796,7 +822,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
 
               <section>
                 <h2 className="text-sm font-semibold text-slate-700">
-                  6. ประเภทของข้อมูล
+                  {isProcessor ? "7" : "6"}. ประเภทของข้อมูล
                 </h2>
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {(
@@ -834,7 +860,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
 
               <section>
                 <h2 className="text-sm font-semibold text-slate-700">
-                  7. วิธีการได้มาซึ่งข้อมูล
+                  {isProcessor ? "8" : "7"}. วิธีการได้มาซึ่งข้อมูล
                 </h2>
                 <div className="mt-3">
                   <select
@@ -856,7 +882,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
 
               <section>
                 <h2 className="text-sm font-semibold text-slate-700">
-                  8. แหล่งที่ได้มาซึ่งข้อมูล
+                  {isProcessor ? "9" : "8"}. แหล่งที่ได้มาซึ่งข้อมูล
                 </h2>
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                   {(
@@ -895,7 +921,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
                 <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-5">
                   <div className="flex items-center justify-between gap-4">
                     <h2 className="text-sm font-semibold text-slate-700">
-                      10. การขอความยินยอมของผู้เยาว์
+                      {isProcessor ? "10" : "9"}. การขอความยินยอมของผู้เยาว์
                     </h2>
                     <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
                       <input
@@ -979,7 +1005,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
             <div className="mt-10 space-y-8">
               <section>
                 <h2 className="text-sm font-semibold text-slate-700">
-                  11. ฐานในการประมวลผล (Legal Basis)
+                  {numberings.legalBasis}. ฐานในการประมวลผล (Legal Basis)
                 </h2>
                 <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
                   {(
@@ -1031,23 +1057,25 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
                 </div>
               </section>
 
-              <section>
-                <h2 className="text-sm font-semibold text-slate-700">
-                  12. การใช้หรือเปิดเผยข้อมูลส่วนบุคคล (ที่ได้รับยกเว้น)
-                </h2>
-                <input
-                  type="text"
-                  value={state.disclosureNote}
-                  onChange={(e) => update("disclosureNote", e.target.value)}
-                  placeholder="เช่น เปิดเผยให้หน่วยงานรัฐตามกฎหมาย"
-                  className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                />
-              </section>
+              {state.role !== "processor" ? (
+                <section>
+                  <h2 className="text-sm font-semibold text-slate-700">
+                    {numberings.disclosure}. การใช้หรือเปิดเผยข้อมูลส่วนบุคคล (ที่ได้รับยกเว้น)
+                  </h2>
+                  <input
+                    type="text"
+                    value={state.disclosureNote}
+                    onChange={(e) => update("disclosureNote", e.target.value)}
+                    placeholder="เช่น เปิดเผยให้หน่วยงานรัฐตามกฎหมาย"
+                    className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </section>
+              ) : null}
 
               <section className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-sm font-semibold text-slate-700">
-                    13. ส่งหรือโอนข้อมูลส่วนบุคคลไปยังต่างประเทศหรือไม่?
+                    {numberings.crossBorder}. ส่งหรือโอนข้อมูลส่วนบุคคลไปยังต่างประเทศหรือไม่?
                   </h2>
                   <div className="flex items-center gap-6 text-sm font-medium text-slate-700">
                     <label className="inline-flex items-center gap-2">
@@ -1083,7 +1111,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
                 <div className={`space-y-3 ${state.crossBorderTransfer ? "" : "opacity-50 pointer-events-none"}`}>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_2fr] sm:items-center">
                     <div className="text-xs font-semibold text-slate-600">
-                      13.1 มีการส่งหรือโอนข้อมูลไปต่างประเทศหรือไม่? (ถ้ามีโปรดระบุชื่อประเทศ)
+                      {numberings.crossBorderSub1} มีการส่งหรือโอนข้อมูลไปต่างประเทศหรือไม่? (ถ้ามีโปรดระบุชื่อประเทศ)
                     </div>
                     <input
                       type="text"
@@ -1096,7 +1124,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
 
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_2fr] sm:items-center">
                     <div className="text-xs font-semibold text-slate-600">
-                      13.2 เป็นการส่งให้บริษัทในเครือหรือไม่? (ถ้ามีโปรดระบุชื่อประเทศ)
+                      {numberings.crossBorderSub2} เป็นการส่งให้บริษัทในเครือหรือไม่? (ถ้ามีโปรดระบุชื่อประเทศ)
                     </div>
                     <div className="flex items-center gap-6 text-sm font-medium text-slate-700">
                       <label className="inline-flex items-center gap-2">
@@ -1137,7 +1165,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
 
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_2fr] sm:items-center">
                     <div className="text-xs font-semibold text-slate-600">
-                      13.3 วิธีการโอนข้อมูล (Transfer Method)
+                      {numberings.crossBorderSub3} วิธีการโอนข้อมูล (Transfer Method)
                     </div>
                     <input
                       type="text"
@@ -1149,7 +1177,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
 
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_2fr] sm:items-center">
                     <div className="text-xs font-semibold text-slate-600">
-                      13.4 มาตรฐานการคุ้มครองข้อมูลฯ / ข้อยกเว้น ม.28 (Protection Standard)
+                      {numberings.crossBorderSub4} มาตรฐานการคุ้มครองข้อมูลฯ / ข้อยกเว้น ม.28 (Protection Standard)
                     </div>
                     <input
                       type="text"
@@ -1170,7 +1198,7 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
               <div className="space-y-8 lg:col-span-2">
                 <section>
                   <h2 className="text-sm font-semibold text-slate-700">
-                    12. นโยบายการเก็บรักษาข้อมูลส่วนบุคคล
+                    {numberings.retentionPolicy}. นโยบายการเก็บรักษาข้อมูลส่วนบุคคล
                   </h2>
 
                   <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -1298,77 +1326,75 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
                 </section>
 
                 {state.role !== "processor" ? (
-                  <>
-                    <section>
-                      <h2 className="text-sm font-semibold text-slate-700">
-                        14. การปฏิเสธคำขอการใช้สิทธิ (ของเจ้าของข้อมูล)
-                      </h2>
-                      <input
-                        type="text"
-                        value={state.rightsRefusalNote}
-                        onChange={(e) => update("rightsRefusalNote", e.target.value)}
-                        placeholder="(ปกติจะปล่อยว่างไว้ เอาไว้กรอกเวลามีเคสเกิดขึ้นจริง)"
-                        className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      />
-                    </section>
-
-                    <section>
-                      <h2 className="text-sm font-semibold text-slate-700">
-                        15. มาตรการรักษาความมั่นคงปลอดภัย
-                      </h2>
-                      <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                        {(
-                          [
-                            { id: "technical", label: "มาตรการเชิงเทคนิค", Icon: Shield },
-                            { id: "physical", label: "มาตรการทางกายภาพ", Icon: Shield },
-                            { id: "access_control", label: "การควบคุมการเข้าถึง", Icon: Shield },
-                            { id: "audit", label: "มาตรการตรวจสอบย้อนหลัง", Icon: Shield },
-                            { id: "organizational", label: "มาตรการเชิงองค์กร", Icon: Shield },
-                          ] as const
-                        ).map(({ id, label, Icon }) => {
-                          const active = state.securityMeasure === id;
-                          return (
-                            <button
-                              key={id}
-                              type="button"
-                              onClick={() => update("securityMeasure", id)}
-                              className={`relative flex flex-col items-center justify-center gap-3 rounded-2xl border p-4 text-center transition ${
-                                active
-                                  ? "border-slate-900/80 bg-blue-50 ring-2 ring-blue-100"
-                                  : "border-slate-200 bg-white hover:border-slate-300"
-                              }`}
-                            >
-                              <span
-                                className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-                                  active ? "bg-blue-800 text-white" : "bg-slate-100 text-slate-400"
-                                }`}
-                              >
-                                <Icon className="h-7 w-7" strokeWidth={2} aria-hidden />
-                              </span>
-                              <span className="text-xs font-semibold leading-snug text-slate-700">
-                                {label}
-                              </span>
-                              <span className="absolute right-3 top-3">
-                                {active ? (
-                                  <CircleCheck className="h-5 w-5 text-blue-700" aria-hidden />
-                                ) : (
-                                  <Circle className="h-5 w-5 text-slate-300" aria-hidden />
-                                )}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <input
-                        type="text"
-                        value={state.securityMeasureNote}
-                        onChange={(e) => update("securityMeasureNote", e.target.value)}
-                        placeholder="(การกำหนดหน้าที่ความรับผิดชอบของผู้ใช้งาน)"
-                        className="mt-4 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      />
-                    </section>
-                  </>
+                  <section>
+                    <h2 className="text-sm font-semibold text-slate-700">
+                      {numberings.rightsRefusal}. การปฏิเสธคำขอการใช้สิทธิ (ของเจ้าของข้อมูล)
+                    </h2>
+                    <input
+                      type="text"
+                      value={state.rightsRefusalNote}
+                      onChange={(e) => update("rightsRefusalNote", e.target.value)}
+                      placeholder="(ปกติจะปล่อยว่างไว้ เอาไว้กรอกเวลามีเคสเกิดขึ้นจริง)"
+                      className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
+                  </section>
                 ) : null}
+
+                <section>
+                  <h2 className="text-sm font-semibold text-slate-700">
+                    {numberings.security}. มาตรการรักษาความมั่นคงปลอดภัย
+                  </h2>
+                  <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                    {(
+                      [
+                        { id: "technical", label: "มาตรการเชิงเทคนิค", Icon: Shield },
+                        { id: "physical", label: "มาตรการทางกายภาพ", Icon: Shield },
+                        { id: "access_control", label: "การควบคุมการเข้าถึง", Icon: Shield },
+                        { id: "audit", label: "มาตรการตรวจสอบย้อนหลัง", Icon: Shield },
+                        { id: "organizational", label: "มาตรการเชิงองค์กร", Icon: Shield },
+                      ] as const
+                    ).map(({ id, label, Icon }) => {
+                      const active = state.securityMeasure === id;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => update("securityMeasure", id)}
+                          className={`relative flex flex-col items-center justify-center gap-3 rounded-2xl border p-4 text-center transition ${
+                            active
+                              ? "border-slate-900/80 bg-blue-50 ring-2 ring-blue-100"
+                              : "border-slate-200 bg-white hover:border-slate-300"
+                          }`}
+                        >
+                          <span
+                            className={`flex h-12 w-12 items-center justify-center rounded-xl ${
+                              active ? "bg-blue-800 text-white" : "bg-slate-100 text-slate-400"
+                            }`}
+                          >
+                            <Icon className="h-7 w-7" strokeWidth={2} aria-hidden />
+                          </span>
+                          <span className="text-xs font-semibold leading-snug text-slate-700">
+                            {label}
+                          </span>
+                          <span className="absolute right-3 top-3">
+                            {active ? (
+                              <CircleCheck className="h-5 w-5 text-blue-700" aria-hidden />
+                            ) : (
+                              <Circle className="h-5 w-5 text-slate-300" aria-hidden />
+                            )}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <input
+                    type="text"
+                    value={state.securityMeasureNote}
+                    onChange={(e) => update("securityMeasureNote", e.target.value)}
+                    placeholder="(การกำหนดหน้าที่ความรับผิดชอบของผู้ใช้งาน)"
+                    className="mt-4 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </section>
               </div>
 
               <aside className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
@@ -1453,10 +1479,12 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
                         <span className="text-xs font-semibold text-slate-600">เลือก: </span>
                         {state.legalBasis.join(", ") || "—"}
                       </div>
-                      <div className="mt-2">
-                        <span className="text-xs font-semibold text-slate-600">เปิดเผย: </span>
-                        {state.disclosureNote || "—"}
-                      </div>
+                      {state.role !== "processor" ? (
+                        <div className="mt-2">
+                          <span className="text-xs font-semibold text-slate-600">เปิดเผย: </span>
+                          {state.disclosureNote || "—"}
+                        </div>
+                      ) : null}
                       <div className="mt-2">
                         <span className="text-xs font-semibold text-slate-600">โอนไปต่างประเทศ: </span>
                         {state.crossBorderTransfer ? "มี" : "ไม่มี"}
@@ -1499,17 +1527,15 @@ export function RopaStep1Form({ recordId, focusFix = false }: Props) {
                         {state.deletionMethod || "—"}
                       </div>
                       {state.role !== "processor" ? (
-                        <>
-                          <div className="mt-2">
-                            <span className="text-xs font-semibold text-slate-600">การปฏิเสธการใช้สิทธิ: </span>
-                            {state.rightsRefusalNote || "—"}
-                          </div>
-                          <div className="mt-2">
-                            <span className="text-xs font-semibold text-slate-600">มาตรการความปลอดภัย: </span>
-                            {state.securityMeasure}
-                          </div>
-                        </>
+                        <div className="mt-2">
+                          <span className="text-xs font-semibold text-slate-600">การปฏิเสธการใช้สิทธิ: </span>
+                          {state.rightsRefusalNote || "—"}
+                        </div>
                       ) : null}
+                      <div className="mt-2">
+                        <span className="text-xs font-semibold text-slate-600">มาตรการความปลอดภัย: </span>
+                        {state.securityMeasure}
+                      </div>
                     </div>
                   </details>
                 </div>

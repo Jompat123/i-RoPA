@@ -48,6 +48,13 @@ export const adminUserManagementMock: AdminUserManagementData = {
   rows: [...rows],
   filters: { q: "", role: "all", department: "" },
   departments: ["Finance", "HR", "IT", "Legal", "Operations"],
+  departmentOptions: [
+    { id: "dep-finance", name: "Finance" },
+    { id: "dep-hr", name: "HR" },
+    { id: "dep-it", name: "IT" },
+    { id: "dep-legal", name: "Legal" },
+    { id: "dep-ops", name: "Operations" },
+  ],
 };
 
 export const adminDashboardMock: AdminDashboardData = {

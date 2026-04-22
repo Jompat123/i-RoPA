@@ -12,6 +12,7 @@ type ApiRopa = {
   status?: string | null;
   updatedAt?: string | null;
   legalBasis?: string | null;
+  dataType?: string | null;
   revisionCount?: number | null;
   version?: number | null;
   isUpdate?: boolean | null;
@@ -31,28 +32,6 @@ function thaiDate(value: string): string {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "-";
   return `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear() + 543}`;
-}
-
-function normalizeLegalBasisKey(value: string): string {
-  const key = value.trim().toLowerCase().replace(/\s+/g, "_");
-  if (!key) return "other";
-  if (key.includes("consent")) return "consent";
-  if (key.includes("contract")) return "contract";
-  if (key.includes("legitimate")) return "legitimate_interest";
-  if (key.includes("obligation")) return "legal_obligation";
-  if (key.includes("public")) return "public_task";
-  if (key.includes("vital")) return "vital_interest";
-  return key;
-}
-
-function legalBasisLabelFromKey(key: string): string {
-  if (key === "consent") return "Consent";
-  if (key === "contract") return "Contract";
-  if (key === "legitimate_interest") return "Legitimate Interest";
-  if (key === "legal_obligation") return "Legal Obligation";
-  if (key === "public_task") return "Public Task";
-  if (key === "vital_interest") return "Vital Interest";
-  return "Other";
 }
 
 function asPositiveInt(value: unknown): number | null {
@@ -117,6 +96,7 @@ function fromRows(rows: ApiRopa[], source: "api" | "mock"): DpoDashboardData {
       ownerName: row.createdBy?.name || "-",
       status,
       legalBasis: row.legalBasis || "",
+      dataType: String(row.dataType || "").trim().toUpperCase(),
       updated,
     };
   });
@@ -134,27 +114,16 @@ function fromRows(rows: ApiRopa[], source: "api" | "mock"): DpoDashboardData {
     .sort((a, b) => a.department.localeCompare(b.department, "th"))
     .slice(0, 4);
 
-  const legalBasisCount = new Map<string, number>();
+  const sensitiveByDepartment = new Map<string, number>();
   normalized.forEach((row) => {
-    const parts = String(row.legalBasis || "")
-      .split(",")
-      .map((x) => x.trim())
-      .filter(Boolean);
-    if (parts.length === 0) {
-      const key = "other";
-      legalBasisCount.set(key, (legalBasisCount.get(key) ?? 0) + 1);
-      return;
-    }
-    parts.forEach((item) => {
-      const key = normalizeLegalBasisKey(item);
-      legalBasisCount.set(key, (legalBasisCount.get(key) ?? 0) + 1);
-    });
+    if (row.dataType !== "SENSITIVE") return;
+    sensitiveByDepartment.set(row.department, (sensitiveByDepartment.get(row.department) ?? 0) + 1);
   });
 
-  const legalBasisDistribution = [...legalBasisCount.entries()]
-    .map(([key, count]) => ({
-      key,
-      label: legalBasisLabelFromKey(key),
+  const legalBasisDistribution = [...sensitiveByDepartment.entries()]
+    .map(([department, count]) => ({
+      key: department.toLowerCase().replace(/\s+/g, "_"),
+      label: department,
       count,
     }))
     .sort((a, b) => b.count - a.count)
@@ -198,6 +167,7 @@ export async function getDpoDashboardData(): Promise<DpoDashboardData> {
       status: row.status,
       updatedAt: row.updatedAt,
       legalBasis: row.legalBasis ?? null,
+      dataType: row.dataType ?? null,
       revisionCount: row.reviewChecks?.length ?? null,
       version: null,
       isUpdate: null,

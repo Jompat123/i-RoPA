@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 
 import { apiPathRopaItem } from "@/config/api-endpoints";
+import { requireApiRole } from "@/lib/auth/require-api-role";
 import { getApiBaseUrl, getAuthTokenFromCookie, shouldUseMockData } from "@/lib/data/runtime";
 import { getMockRopaById, updateMockRopa } from "@/lib/data/mock-ropa-store";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, context: Ctx) {
+  const denied = await requireApiRole(["DATA_OWNER", "DPO", "ADMIN"]);
+  if (denied) return denied;
+
   const { id } = await context.params;
 
   if (shouldUseMockData()) {
@@ -32,6 +36,9 @@ export async function GET(_request: Request, context: Ctx) {
 }
 
 export async function PUT(request: Request, context: Ctx) {
+  const denied = await requireApiRole(["DATA_OWNER"]);
+  if (denied) return denied;
+
   const { id } = await context.params;
   const body = await request.json();
 
