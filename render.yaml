@@ -1,0 +1,26 @@
+# Render Blueprint — ยก Backend ขึ้น https://render.com
+# หลัง push: ไป Render → New → Blueprint → เลือก repo นี้
+# หรือสร้าง Web Service มือ + ตั้งค่าเหมือนด้านล่าง
+#
+# ต้องใส่ env ใน Dashboard: DATABASE_URL, JWT_SECRET, CORS_ORIGIN (URL ของ Vercel)
+
+services:
+  - type: web
+    name: iropa-api
+    runtime: node
+    # free tier มักใช้ us-west; แก้ใน Dashboard ถ้าต้องการ region อื่น
+    region: oregon
+    plan: free
+    rootDir: Backend
+    buildCommand: npm ci && npx prisma generate
+    startCommand: npm run start:web
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        sync: false

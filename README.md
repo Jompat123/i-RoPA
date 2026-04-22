@@ -6,6 +6,8 @@
 - สคริปต์ที่ root (เช่น `npm run db:up`, `npm run dev`) เป็นแค่ **shortcut** ไป `Frontend` / `docker compose` — dependencies หลักอยู่ในแต่ละโปรเจกต์ย่อย
 - รันเทสฝั่ง backend ต้องมี PostgreSQL ตาม `Backend/.env` แล้ว (เช่น `docker compose up` + `npm --prefix Backend run db:reset`) ก่อน: `npm run test:backend`
 
+**Deploy (ทำทีละขั้น):** ดู [`docs/DEPLOY.md`](docs/DEPLOY.md) — มี `render.yaml` สำหรับ Render และคำแนะนำ Vercel + Neon
+
 ## รันบนเครื่องใหม่ (แนะนำ)
 
 ### 0) สิ่งที่ต้องมี
