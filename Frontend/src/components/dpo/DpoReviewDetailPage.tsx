@@ -152,7 +152,7 @@ export function DpoReviewDetailPage({ data }: Props) {
       } catch {
         // ignore
       }
-      router.push(`/dpo/reviews?updated=1&id=${data.id}`);
+      router.push(`/activities?reviewed=1&id=${data.id}`);
       router.refresh();
     });
   }

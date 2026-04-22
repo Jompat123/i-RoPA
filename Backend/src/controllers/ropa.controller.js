@@ -53,7 +53,20 @@ const create = async (req) => {
   data.createdById = req.user.id;
   data.departmentId = data.departmentId || req.user.departmentId;
 
-  const result = await prisma.ropaEntry.create({ data });
+  // ลบ field ที่ schema ไม่มี
+  const { dataControllerAddress, controllerInfoAddress, ropaRole, processorInfo, ...validData } = data;
+
+  // Map status ให้ตรงกับ schema (DRAFT หรือ COMPLETE)
+  if (validData.status) {
+    const statusUpper = String(validData.status).toUpperCase();
+    if (statusUpper === 'PENDING' || statusUpper === 'SUBMITTED' || statusUpper === 'IN_REVIEW' || statusUpper === 'APPROVED') {
+      validData.status = 'COMPLETE'; // ใช้ COMPLETE แทน PENDING
+    } else if (statusUpper === 'NEEDS_FIX' || statusUpper === 'REJECTED') {
+      validData.status = 'DRAFT'; // ให้กลับไป DRAFT ต้องแก้ก่อน
+    }
+  }
+
+  const result = await prisma.ropaEntry.create({ data: validData });
   await createAuditLog(req.user.id, 'CREATE', 'RopaEntry', result.id, null, result);
   return result;
 };
@@ -69,16 +82,31 @@ const update = async (req, id) => {
   }
 
   const data = req.body;
-  let updateData = data;
+
+  // ลบ field ที่ schema ไม่มี
+  const { dataControllerAddress, controllerInfoAddress, ropaRole, processorInfo, ...validData } = data;
+
+  let updateData;
   if (req.user.role === 'VIEWER') {
+    // VIEWERs only allowed to update review-related fields
     const allowedKeys = ['status', 'reviewDecision', 'reviewNote', 'reviewChecks'];
-    updateData = Object.fromEntries(
-      Object.entries(data).filter(([key]) => allowedKeys.includes(key))
-    );
+    updateData = Object.fromEntries(Object.entries(data).filter(([key]) => allowedKeys.includes(key)));
     if (!Object.keys(updateData).length) {
       throw new Error('Forbidden');
     }
+  } else {
+    // Map status ให้ตรงกับ schema (DRAFT หรือ COMPLETE)
+    if (validData.status) {
+      const statusUpper = String(validData.status).toUpperCase();
+      if (statusUpper === 'PENDING' || statusUpper === 'SUBMITTED' || statusUpper === 'IN_REVIEW' || statusUpper === 'APPROVED') {
+        validData.status = 'COMPLETE';
+      } else if (statusUpper === 'NEEDS_FIX' || statusUpper === 'REJECTED') {
+        validData.status = 'DRAFT';
+      }
+    }
+    updateData = validData;
   }
+
   const result = await prisma.ropaEntry.update({ where: { id }, data: updateData });
   await createAuditLog(req.user.id, 'UPDATE', 'RopaEntry', id, oldData, result);
   return result;
