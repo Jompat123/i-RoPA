@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Base64 font data — ESLint parser overflows on the huge string concat.
+    "src/lib/pdf/noto-sans-thai-base64.ts",
   ]),
 ]);
 
